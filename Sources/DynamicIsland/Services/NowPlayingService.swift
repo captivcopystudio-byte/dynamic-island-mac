@@ -99,7 +99,50 @@ final class NowPlayingService: ObservableObject {
 
     // MARK: - Refresh
 
-    @objc private func playerChanged(_ note: Notification) { refresh() }
+    @objc private func playerChanged(_ note: Notification) {
+        // The notification carries the authoritative state, so use it immediately
+        // instead of waiting for an AppleScript round-trip.
+        if let state = note.userInfo?["Player State"] as? String {
+            let app: PlayerApp = note.name.rawValue.hasPrefix("com.spotify") ? .spotify : .music
+            if source == nil || source == app {
+                let playing = state == "Playing"
+                let resolved = resolvedPlaying(playing)
+                if resolved != isPlaying, track != nil {
+                    rebase(position(at: Date()))
+                    isPlaying = resolved
+                }
+            }
+        }
+        refresh()
+    }
+
+    // MARK: - Command expectations
+    //
+    // After a click we know what the state *should* be. Players briefly report stale or
+    // in-between states (e.g. "Paused" while skipping), which made the button flicker.
+    // For a short window we trust the user's intent over what the player reports.
+
+    private var commandGeneration = 0
+    private var expectedPlaying: Bool?
+    private var expectationDeadline = Date.distantPast
+
+    private func expect(playing: Bool, for seconds: Double = 1.5) {
+        commandGeneration += 1
+        expectedPlaying = playing
+        expectationDeadline = Date().addingTimeInterval(seconds)
+        // Reconcile with the real player once things settle.
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds + 0.15) { [weak self] in
+            self?.refresh()
+        }
+    }
+
+    private func resolvedPlaying(_ reported: Bool) -> Bool {
+        if let expected = expectedPlaying {
+            if Date() < expectationDeadline { return expected }
+            expectedPlaying = nil
+        }
+        return reported
+    }
 
     @objc private func appsChanged(_ note: Notification) {
         guard let app = note.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
@@ -114,6 +157,7 @@ final class NowPlayingService: ObservableObject {
             return
         }
         let preferred = source
+        let generation = commandGeneration
         queue.async { [weak self] in
             guard let self else { return }
             var snapshots: [PlayerSnapshot] = []
@@ -127,7 +171,11 @@ final class NowPlayingService: ObservableObject {
             let pick = snapshots.first { $0.isPlaying && $0.track != nil }
                 ?? snapshots.first { $0.app == preferred && $0.track != nil }
                 ?? snapshots.first { $0.track != nil }
-            DispatchQueue.main.async { self.apply(pick, denied: denied) }
+            DispatchQueue.main.async {
+                // A command was sent after this query started: its result is stale.
+                guard generation == self.commandGeneration else { return }
+                self.apply(pick, denied: denied)
+            }
         }
     }
 
@@ -143,12 +191,13 @@ final class NowPlayingService: ObservableObject {
             return
         }
 
+        let playing = resolvedPlaying(snap.isPlaying)
         let trackChanged = newTrack != track
-        let stateChanged = snap.isPlaying != isPlaying
+        let stateChanged = playing != isPlaying
         let drift = abs(position(at: Date()) - snap.position)
 
         if trackChanged { track = newTrack }
-        if stateChanged { isPlaying = snap.isPlaying }
+        if stateChanged { isPlaying = playing }
         if source != snap.app { source = snap.app }
         if trackChanged || stateChanged || drift > 1.5 { rebase(snap.position) }
 
@@ -313,19 +362,40 @@ final class NowPlayingService: ObservableObject {
     // MARK: - Controls
 
     func playPause() {
+        let target = !isPlaying
         rebase(position(at: Date()))
-        isPlaying.toggle()
-        send("playpause")
+        isPlaying = target
+        expect(playing: target)
+        // Explicit play/pause (not the "playpause" toggle) so a stale UI state can
+        // never toggle the player the wrong way.
+        send(target ? "play" : "pause")
     }
 
-    func next() {
-        send("next track")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.refresh() }
-    }
+    func next() { skip("next track") }
 
-    func previous() {
-        send("previous track")
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.refresh() }
+    func previous() { skip("previous track") }
+
+    /// Skipping can leave Music paused (notably for streamed Apple Music tracks), so if
+    /// we were playing, explicitly resume after the skip.
+    private func skip(_ command: String) {
+        let keepPlaying = isPlaying
+        rebase(0)
+        expect(playing: keepPlaying, for: 2)
+        guard let app = source, app.isRunning else { return }
+        var script = "tell application \"\(app.appName)\" to \(command)"
+        if keepPlaying {
+            script += """
+
+            delay 0.15
+            tell application "\(app.appName)"
+                if player state is not playing then play
+            end tell
+            """
+        }
+        queue.async { [weak self] in
+            _ = self?.run(script)
+            DispatchQueue.main.async { self?.refresh() }
+        }
     }
 
     func seek(to seconds: Double) {

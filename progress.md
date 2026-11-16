@@ -27,6 +27,9 @@ Update this file at the end of every work session.
 - [x] `--snapshot <dir>` mode renders every state to PNG (README screenshots)
 - [x] Verified: idle CPU 0%, ~70 MB RAM
 
+### Fixes
+- **2026-11-15 · Play/pause flicker + Next pausing the song.** Causes: (1) the button flipped optimistically, then a status query that started *before* the click came back with the old state and flipped it back; (2) `next track` can leave Music paused, and Music briefly reports "Paused" mid-skip. Fix in `NowPlayingService`: explicit `play`/`pause` instead of the `playpause` toggle; a command generation counter that drops stale query results; a short "expected state" window that trusts the user's click over transitional reports; skip resumes playback if it was playing; distributed-notification `Player State` applied instantly.
+
 ### Not yet verified on device
 - [ ] Hover/click interactions by hand (couldn't screen-record from the terminal)
 - [ ] Music permission prompt flow + real track/artwork with Music.app playing
