@@ -10,6 +10,7 @@ struct IslandRootView: View {
     var body: some View {
         VStack(spacing: 0) {
             island
+                .padding(.top, vm.geometry.topInset)
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -17,7 +18,8 @@ struct IslandRootView: View {
 
     private var island: some View {
         let size = vm.size
-        let shape = NotchShape(topRadius: vm.topRadius, bottomRadius: vm.bottomRadius)
+        let shape = NotchShape(topRadius: vm.topRadius, bottomRadius: vm.bottomRadius,
+                               floating: !vm.geometry.hasNotch)
 
         return ZStack(alignment: .top) {
             if vm.isExpanded {
@@ -53,7 +55,7 @@ struct IslandRootView: View {
     @ViewBuilder private var musicElements: some View {
         if vm.showsMusicElements {
             let m = MusicLayout(expanded: vm.isExpanded, notchHeight: vm.geometry.notchSize.height,
-                                flare: vm.topRadius)
+                                flare: vm.topRadius, contentTop: vm.contentTop)
             ArtworkView(image: vm.nowPlaying.artwork, radius: m.artRadius)
                 .frame(width: m.artSize, height: m.artSize)
                 .shadow(color: vm.nowPlaying.accent.opacity(vm.isExpanded ? 0.3 : 0), radius: 12)
@@ -77,7 +79,6 @@ struct IslandRootView: View {
 /// Where the shared music elements sit in each state. `ExpandedView` reserves matching gaps.
 struct MusicLayout {
     static let expandedArt: CGFloat = 58
-    static let expandedTop: CGFloat = 14
     static let expandedMargin: CGFloat = 18 // from the island body edge (inside the flare)
     static let waveHeight: CGFloat = 14
 
@@ -89,15 +90,15 @@ struct MusicLayout {
     let waveTrailing: CGFloat
     let waveTop: CGFloat
 
-    init(expanded: Bool, notchHeight: CGFloat, flare: CGFloat) {
+    init(expanded: Bool, notchHeight: CGFloat, flare: CGFloat, contentTop: CGFloat) {
         if expanded {
             artSize = Self.expandedArt
             artRadius = 14
             artLeading = flare + Self.expandedMargin
-            artTop = Self.expandedTop
+            artTop = contentTop
             waveScale = 1.5
             waveTrailing = flare + Self.expandedMargin + 2
-            waveTop = Self.expandedTop + (Self.expandedArt - Self.waveHeight) / 2
+            waveTop = contentTop + (Self.expandedArt - Self.waveHeight) / 2
         } else {
             artSize = 22
             artRadius = 6.5

@@ -11,9 +11,11 @@ struct ExpandedView: View {
             if vm.tab == .media, let track = vm.nowPlaying.track {
                 MediaPlayerView(np: vm.nowPlaying, track: track, showTimer: { vm.tab = .timer },
                                 timerActive: vm.timer.isActive)
+                    .padding(.top, vm.contentTop)
             } else {
                 VStack(spacing: 0) {
                     header
+                        .padding(.top, vm.contentTop - 4)
                     Group {
                         switch vm.tab {
                         case .media: NothingPlayingView(np: vm.nowPlaying)
@@ -30,20 +32,14 @@ struct ExpandedView: View {
         .frame(width: vm.expandedSize.width, height: vm.expandedSize.height, alignment: .top)
     }
 
-    /// Strip beside the camera: tabs on the left, battery on the right.
+    /// Tabs on the left, battery on the right.
     private var header: some View {
         HStack(spacing: 0) {
             TabSwitcher(selection: $vm.tab)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if vm.geometry.hasNotch {
-                Color.clear.frame(width: vm.geometry.notchSize.width)
-            } else {
-                ClockLabel().frame(width: vm.geometry.notchSize.width)
-            }
+            Spacer(minLength: 0)
             BatteryHeader(battery: vm.battery)
-                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .frame(height: vm.geometry.notchSize.height)
+        .frame(height: 24)
     }
 }
 
@@ -86,16 +82,6 @@ private struct BatteryHeader: View {
     }
 }
 
-private struct ClockLabel: View {
-    var body: some View {
-        TimelineView(.everyMinute) { ctx in
-            Text(ctx.date, format: .dateTime.hour().minute())
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white.opacity(0.7))
-        }
-    }
-}
-
 // MARK: - Media
 
 /// Same arrangement as the iPhone's expanded Now Playing: art top-left, waveform top-right,
@@ -133,7 +119,6 @@ struct MediaPlayerView: View {
                 .padding(.bottom, 2)
                 Spacer(minLength: 34) // waveform lives here
             }
-            .padding(.top, MusicLayout.expandedTop)
 
             ProgressRow(np: np, duration: track.duration)
                 .padding(.top, 9)

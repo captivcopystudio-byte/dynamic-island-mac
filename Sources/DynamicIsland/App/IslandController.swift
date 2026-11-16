@@ -49,6 +49,9 @@ final class IslandController {
         reposition()
         panel.orderFrontRegardless()
 
+        NotificationCenter.default.addObserver(forName: Prefs.didChange, object: nil, queue: .main) { [weak self] _ in
+            self?.reposition()
+        }
         NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification,
                                                object: nil, queue: .main) { [weak self] _ in
             self?.reposition()
@@ -73,13 +76,14 @@ final class IslandController {
 
     /// The built-in (notched) display wins; otherwise the main display.
     private func preferredScreen() -> NSScreen? {
-        NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens.first
+        if Prefs.pillStyle { return NSScreen.main ?? NSScreen.screens.first }
+        return NSScreen.screens.first { $0.safeAreaInsets.top > 0 } ?? NSScreen.main ?? NSScreen.screens.first
     }
 
     private func reposition() {
         guard let screen = preferredScreen() else { return }
         self.screen = screen
-        viewModel.geometry = NotchGeometry(screen: screen)
+        viewModel.geometry = Prefs.pillStyle ? .pill(on: screen) : NotchGeometry(screen: screen)
         let f = screen.frame
         let size = Self.panelSize
         panel.setFrame(NSRect(x: f.midX - size.width / 2,
@@ -93,8 +97,10 @@ final class IslandController {
         guard let screen else { return nil }
         let f = screen.frame
         let size = viewModel.size
-        var rect = NSRect(x: f.midX - size.width / 2, y: f.maxY - size.height,
-                          width: size.width, height: size.height + 2) // +2: include the very top pixel row
+        let inset = viewModel.geometry.topInset
+        var rect = NSRect(x: f.midX - size.width / 2, y: f.maxY - inset - size.height,
+                          width: size.width, height: size.height + inset + 2) // reach the top edge
+        if !viewModel.isVisible { rect = rect.insetBy(dx: -40, dy: 0) } // hidden pill: easier to find
         rect = viewModel.isExpanded ? rect.insetBy(dx: -4, dy: -4) : rect.insetBy(dx: -10, dy: -6)
         return rect
     }
@@ -114,14 +120,25 @@ final class IslandController {
 }
 
 struct NotchGeometry: Equatable {
+    /// With a notch: the camera housing. Without: the resting size of the floating pill.
     var notchSize: CGSize
+    /// true = attached to the hardware notch. false = free-floating pill (iPhone style).
     var hasNotch: Bool
+    /// Gap between the top of the screen and the island (pill style only).
+    var topInset: CGFloat = 0
 
-    static let fallback = NotchGeometry(notchSize: CGSize(width: 185, height: 32), hasNotch: false)
+    static let pillSize = CGSize(width: 56, height: 30)
+    static let fallback = NotchGeometry(notchSize: pillSize, hasNotch: false, topInset: 5)
 
-    init(notchSize: CGSize, hasNotch: Bool) {
+    init(notchSize: CGSize, hasNotch: Bool, topInset: CGFloat = 0) {
         self.notchSize = notchSize
         self.hasNotch = hasNotch
+        self.topInset = topInset
+    }
+
+    /// Floating pill. On a notched screen it sits just below the notch.
+    static func pill(on screen: NSScreen) -> NotchGeometry {
+        NotchGeometry(notchSize: pillSize, hasNotch: false, topInset: screen.safeAreaInsets.top + 5)
     }
 
     init(screen: NSScreen) {
@@ -130,9 +147,7 @@ struct NotchGeometry: Equatable {
             notchSize = CGSize(width: screen.frame.width - left.width - right.width, height: top)
             hasNotch = true
         } else {
-            let menuBar = screen.frame.maxY - screen.visibleFrame.maxY
-            notchSize = CGSize(width: 185, height: menuBar > 0 ? menuBar : 32)
-            hasNotch = false
+            self = .pill(on: screen)
         }
     }
 }

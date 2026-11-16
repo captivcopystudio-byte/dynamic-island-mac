@@ -5,8 +5,13 @@ cd "$(dirname "$0")/.."
 
 APP_NAME="Dynamic Island"
 BUNDLE_ID="com.opensource.dynamicisland"
-VERSION="${VERSION:-1.0.0}"
-APP="build/${APP_NAME}.app"
+VERSION="${VERSION:-1.1.0}"
+# VARIANT=notch (default): hugs the MacBook notch, falls back to a pill on screens without one.
+# VARIANT=pill: always a floating pill, for Macs with no notch.
+VARIANT="${VARIANT:-notch}"
+OUT_DIR="${OUT_DIR:-build}"
+APP="${OUT_DIR}/${APP_NAME}.app"
+STYLE="auto"; [ "$VARIANT" = "pill" ] && STYLE="pill"
 
 echo "==> Compiling (release, arm64)"
 swift build -c release --arch arm64
@@ -48,6 +53,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>14.2</string>
   <key>LSUIElement</key><true/>
+  <key>DIDefaultStyle</key><string>${STYLE}</string>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSAudioCaptureUsageDescription</key>
   <string>Dynamic Island listens to the audio that's playing so the waveform can move with the music. Nothing is recorded or saved.</string>

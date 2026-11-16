@@ -14,7 +14,9 @@ enum Snapshotter {
                               album: "Afterglow", duration: 214, isExplicit: true)
         let art = demoArtwork()
 
-        func shot(_ name: String, _ setup: () -> Void) {
+        let notch = vm.geometry
+        func shot(_ name: String, pill: Bool = false, _ setup: () -> Void) {
+            vm.geometry = pill ? NotchGeometry(notchSize: NotchGeometry.pillSize, hasNotch: false, topInset: 5) : notch
             vm.timer.cancel()
             vm.nowPlaying.applyDemo(track: nil, playing: false, artwork: nil, position: 0)
             vm.battery.applyDemo(level: 82, charging: false)
@@ -28,6 +30,12 @@ enum Snapshotter {
                                startPoint: .topLeading, endPoint: .bottomTrailing)
                 Rectangle().fill(Color.black.opacity(0.18)).frame(height: 33.5) // menu bar
                 IslandRootView(vm: vm)
+                if ProcessInfo.processInfo.environment["SHOW_NOTCH"] != nil {
+                    // Debug: draw where the physical camera housing sits, to spot collisions.
+                    UnevenRoundedRectangle(cornerRadii: .init(bottomLeading: 9, bottomTrailing: 9))
+                        .fill(Color(red: 0.45, green: 0.05, blue: 0.05))
+                        .frame(width: 185, height: 33.5)
+                }
             }
             .frame(width: 600, height: 250)
             .transaction { $0.animation = nil; $0.disablesAnimations = true }
@@ -102,6 +110,21 @@ enum Snapshotter {
         }
         shot("16-caps-lock") {
             vm.applyDemo(expanded: false, transient: .capsOn, tab: .media)
+        }
+        shot("20-pill-compact-music", pill: true) {
+            vm.nowPlaying.applyDemo(track: track, playing: true, artwork: art, position: 62)
+        }
+        shot("21-pill-expanded-music", pill: true) {
+            vm.nowPlaying.applyDemo(track: track, playing: true, artwork: art, position: 62)
+            vm.applyDemo(expanded: true, transient: nil, tab: .media)
+        }
+        shot("22-pill-expanded-timer", pill: true) {
+            vm.timer.start(seconds: 1500)
+            vm.applyDemo(expanded: true, transient: nil, tab: .timer)
+        }
+        shot("23-pill-charging", pill: true) {
+            vm.battery.applyDemo(level: 82, charging: true)
+            vm.applyDemo(expanded: false, transient: .charging, tab: .media)
         }
         shot("10-nothing-playing") {
             vm.applyDemo(expanded: true, transient: nil, tab: .media)

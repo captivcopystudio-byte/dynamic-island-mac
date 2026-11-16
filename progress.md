@@ -5,7 +5,7 @@ Update this file at the end of every work session.
 
 ---
 
-## Status: v1.1 in progress (2026-11-15). v1.0.0 is tagged and public on GitHub
+## Status: v1.1.0 released (2026-11-15) with Notch and NoNotch downloads
 
 ### Done
 - [x] Swift Package app (SwiftUI + AppKit), builds with **Command Line Tools only** (no Xcode needed)
@@ -53,7 +53,11 @@ Update this file at the end of every work session.
   - All of these are **untested with real events/devices**; only the rendering is verified
   - Not possible: reading the iPhone's Live Activities (no API)
 
+- [x] **Two variants** (v1.1.0): `DynamicIsland-Notch.zip` and `DynamicIsland-NoNotch.zip`, built by `make release`. Same code; the only difference is the Info.plist key `DIDefaultStyle` (`auto` / `pill`), which sets the default of the "Floating Pill Style" menu toggle
+- [x] **Floating pill style** for Macs without a notch: capsule detached from the top edge, all four corners rounded when expanded, hidden when idle. On a notched screen it sits just below the notch
+
 ### Fixes
+- **2026-11-15 · Notch collisions.** At 400 pt wide the island left only ~77 pt beside the 185 pt notch: the title sat jammed under it and the third tab was hidden behind it. Expanded content now starts fully below the notch (`contentTop`). Found by drawing the notch into snapshots: `SHOW_NOTCH=1 DynamicIsland --snapshot <dir>`.
 - **2026-11-15 · Play/pause flicker + Next pausing the song.** Causes: (1) the button flipped optimistically, then a status query that started *before* the click came back with the old state and flipped it back; (2) `next track` can leave Music paused, and Music briefly reports "Paused" mid-skip. Fix in `NowPlayingService`: explicit `play`/`pause` instead of the `playpause` toggle; a command generation counter that drops stale query results; a short "expected state" window that trusts the user's click over transitional reports; skip resumes playback if it was playing; distributed-notification `Player State` applied instantly.
 
 ### Not yet verified on device

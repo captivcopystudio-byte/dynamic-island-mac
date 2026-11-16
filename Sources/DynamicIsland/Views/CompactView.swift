@@ -17,7 +17,7 @@ struct CompactView: View {
                 .frame(width: ear - 10, alignment: .trailing)
                 .padding(.trailing, 10)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, vm.topRadius)
         .frame(width: vm.compactSize(kind).width, height: vm.geometry.notchSize.height)
     }
 

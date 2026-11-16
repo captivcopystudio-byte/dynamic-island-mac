@@ -172,12 +172,23 @@ final class IslandViewModel: ObservableObject {
         LayoutKey(expanded: isExpanded, compact: compactKind, bubble: showsTimerBubble, music: showsMusicElements, tab: tab, visible: isVisible)
     }
 
-    var topRadius: CGFloat { isExpanded ? 12 : 6 }
-    var bottomRadius: CGFloat { isExpanded ? 38 : (compactKind == nil ? 10 : 14) }
+    private var pill: Bool { !geometry.hasNotch }
 
-    /// Apple's expanded island is ~371-408 pt wide and at most 160 pt tall (HIG, Live Activities).
+    /// Concave flares only make sense when attached to the top edge.
+    var topRadius: CGFloat { pill ? 0 : (isExpanded ? 12 : 6) }
+    var bottomRadius: CGFloat {
+        if isExpanded { return 38 }
+        if pill { return geometry.notchSize.height / 2 } // capsule
+        return compactKind == nil ? 10 : 14
+    }
+
+    /// Where expanded content starts. A MacBook notch is wide (185 pt of a 400 pt island), so
+    /// content goes fully below it; the floating pill has no camera to avoid.
+    var contentTop: CGFloat { pill ? 14 : geometry.notchSize.height + 6 }
+
+    /// Apple's expanded island is ~371-408 pt wide and up to 160 pt tall (HIG, Live Activities).
     var expandedSize: CGSize {
-        CGSize(width: 400, height: max(150, geometry.notchSize.height + 112))
+        CGSize(width: 400, height: contentTop + 134)
     }
 
     /// Album art + waveform stay on screen and glide between compact and expanded.
@@ -204,7 +215,7 @@ final class IslandViewModel: ObservableObject {
 
     func compactSize(_ kind: CompactKind) -> CGSize {
         let n = geometry.notchSize
-        return CGSize(width: n.width + 2 * earWidth(kind) + 2 * 6, height: n.height)
+        return CGSize(width: n.width + 2 * earWidth(kind) + 2 * topRadius, height: n.height)
     }
 
     var size: CGSize {

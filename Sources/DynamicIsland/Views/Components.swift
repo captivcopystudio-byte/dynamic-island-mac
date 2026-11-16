@@ -6,6 +6,8 @@ import SwiftUI
 struct NotchShape: Shape {
     var topRadius: CGFloat
     var bottomRadius: CGFloat
+    /// Free-floating (no notch): round all four corners like the iPhone's island.
+    var floating = false
 
     var animatableData: AnimatablePair<CGFloat, CGFloat> {
         get { AnimatablePair(topRadius, bottomRadius) }
@@ -13,6 +15,10 @@ struct NotchShape: Shape {
     }
 
     func path(in rect: CGRect) -> Path {
+        if floating {
+            let r = max(0, min(bottomRadius, rect.height / 2, rect.width / 2))
+            return RoundedRectangle(cornerRadius: r, style: .continuous).path(in: rect)
+        }
         let t = max(0, min(topRadius, rect.width / 4, rect.height / 2))
         let b = max(0, min(bottomRadius, rect.height, (rect.width - 2 * t) / 2))
         // Body: Apple's "continuous" (squircle) corners at the bottom, square at the top.

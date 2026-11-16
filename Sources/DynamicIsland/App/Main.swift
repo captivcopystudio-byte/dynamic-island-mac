@@ -53,6 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(title)
         menu.addItem(.separator())
 
+        menu.addItem(toggleItem("Floating Pill Style (No Notch)", key: Prefs.pillStyleKey))
         menu.addItem(toggleItem("Expand on Hover", key: Prefs.expandOnHover))
         menu.addItem(toggleItem("Haptic Feedback", key: Prefs.haptics))
         menu.addItem(toggleItem("Show Volume HUD", key: Prefs.volumeHUD))
@@ -124,6 +125,10 @@ enum Prefs {
     static let pauseOthers = "pauseOtherAudio"
 
     static let didChange = Notification.Name("DynamicIslandPrefsDidChange")
+    static let pillStyleKey = "floatingPillStyle"
+
+    /// Floating pill instead of hugging the notch. The "No Notch" download turns this on by default.
+    static var pillStyle: Bool { bool(pillStyleKey) }
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -136,6 +141,7 @@ enum Prefs {
             deviceAlerts: true,
             privacyIndicator: true,
             systemAlerts: true,
+            pillStyleKey: (Bundle.main.object(forInfoDictionaryKey: "DIDefaultStyle") as? String) == "pill",
             pauseOthers: true,
         ])
     }

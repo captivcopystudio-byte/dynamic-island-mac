@@ -1,6 +1,6 @@
 APP := build/Dynamic Island.app
 
-.PHONY: build app run install clean
+.PHONY: build app run install release clean
 
 build:
 	swift build -c release
@@ -17,6 +17,9 @@ install: app
 	rm -rf "/Applications/Dynamic Island.app"
 	cp -R "$(APP)" /Applications/
 	open "/Applications/Dynamic Island.app"
+
+release:
+	./scripts/release.sh
 
 clean:
 	rm -rf .build build

@@ -29,9 +29,23 @@ Other details:
 - On Macs without a notch it shows as a floating pill at the top of the screen
 - Menu bar icon with settings: hover-to-expand, haptics, volume HUD, battery alerts, and Launch at Login
 
-## Install
+## Download
 
-Requires **macOS 14.2 or later** on Apple silicon, plus the Xcode Command Line Tools (`xcode-select --install`). You don't need the full Xcode.
+Get the one that matches your Mac from the [latest release](https://github.com/captivcopystudio-byte/dynamic-island-mac/releases/latest):
+
+| Your Mac | Download | What you get |
+|---|---|---|
+| **Has a notch** (MacBook Air 2022+, MacBook Pro 14"/16") | `DynamicIsland-Notch.zip` | The island grows out of the notch |
+| **No notch** (older MacBooks, iMac, Mac mini, external displays) | `DynamicIsland-NoNotch.zip` | A floating pill at the top of the screen, like iPhone |
+
+![Notch style](docs/screenshots/03-expanded-music.png)
+![No-notch pill style](docs/screenshots/21-pill-expanded-music.png)
+
+Unzip, drag **Dynamic Island** to Applications, then right-click it and choose **Open** the first time (the app isn't notarized). Requires **macOS 14.2 or later** on Apple silicon. You can also switch styles any time from the menu bar icon ("Floating Pill Style").
+
+## Build from source
+
+Needs the Xcode Command Line Tools (`xcode-select --install`). You don't need the full Xcode.
 
 ```bash
 git clone https://github.com/captivcopystudio-byte/dynamic-island-mac.git
@@ -43,7 +57,7 @@ Other commands:
 
 ```bash
 make run         # build and run from ./build without installing
-make app         # just build build/Dynamic Island.app
+make release     # build both downloads (Notch + NoNotch zips) into build/release
 make clean
 ```
 
