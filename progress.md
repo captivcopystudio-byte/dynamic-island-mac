@@ -5,92 +5,126 @@ Update this file at the end of every work session.
 
 ---
 
-## Status: v1.1.0 released (2026-11-15) with Notch and NoNotch downloads
+## Status: v1.1.2 (2026-11-16)
 
-### Done
-- [x] Swift Package app (SwiftUI + AppKit), builds with **Command Line Tools only** (no Xcode needed)
-- [x] `scripts/build-app.sh` → `build/Dynamic Island.app` (Info.plist, generated icon, ad-hoc signed)
-- [x] `Makefile`: `make run`, `make install`, `make clean`
-- [x] Borderless panel above the menu bar, centred on the notch, on all Spaces and over full-screen apps
-- [x] Exact notch size detection (MacBook Air M5: **185 × 33.5 pt**)
-- [x] `NotchShape`: concave top flares + rounded bottom, with animated radii
-- [x] Spring morph between idle → compact → expanded, with blur/fade content transitions
-- [x] Hover to expand (0.12 s delay), collapse on leave or outside click, clicks pass through everywhere else
-- [x] Haptic feedback on expand
-- [x] **Now Playing** (Apple Music + Spotify): title, artist, artwork, album-tinted waveform, scrubber with seek, play/pause/next/previous
-- [x] "Nothing Playing" state with Open Music/Spotify buttons, plus an Automation-permission hint
-- [x] **Timer**: 8 presets, countdown live activity, pause/resume/cancel, "Done" alert with chime
-- [x] Split island: timer bubble beside music
-- [x] **Volume HUD** (CoreAudio listener, follows output device changes)
-- [x] **Battery**: charging alert on plug-in, low-battery alert at ≤20%, % + glyph in header
-- [x] Menu bar item: toggles for hover, haptics, volume HUD, battery alerts, Launch at Login, Quit
-- [x] `--snapshot <dir>` mode renders every state to PNG (README screenshots)
-- [x] Verified: idle CPU 0%, ~70 MB RAM
+- **Repo:** https://github.com/captivcopystudio-byte/dynamic-island-mac (public)
+- **Releases:** v1.0.0 (source only), v1.1.0 and v1.1.1 (superseded), **v1.1.2 (latest)**
+- **Downloads per release:** `DynamicIsland-Notch.zip` (MacBooks with a notch) and `DynamicIsland-NoNotch.zip` (floating pill)
+- **Requires:** macOS 14.2+, Apple silicon
+- **Dev machine:** MacBook Air M5, macOS 27, notch 185 × 33.5 pt, Command Line Tools only (no Xcode)
 
-### Added after v1.0.0
-- [x] **Browser / YouTube / any-app audio** via a MediaRemote bridge: `bridge/MediaRemoteAdapter.m` (dylib) loaded into `/usr/bin/perl` by `bridge/mr-bridge.pl`. JSON lines out, commands in on stdin. Confirmed working on macOS 27 with Music; **YouTube in a browser not yet tested by hand**.
-- [x] Source app icon in the player (click to open that app); live streams show "LIVE"
-- [x] **UI redesign to match Apple's HIG for Live Activities**:
-  - Expanded island is now 400 × 150 pt (Apple's is 371-408 wide, max 160 tall); was 500 × 193
-  - Continuous (squircle) bottom corners
-  - Album art and waveform are single persistent views that glide and grow between compact and expanded ("expanded is an enlarged version of compact")
-  - Art top-left and waveform top-right sit beside the camera; title/artist, scrubber, transport below
-  - Bouncy spring on open, calmer spring on close
-  - Timer view like iPhone's: round pause/cancel buttons left, big orange countdown right
-  - Waveform at 20 fps instead of 30 to cut CPU while playing (was ~8-10% of a core; not re-measured)
+## What the app does today
 
-- [removed, see Fixes] ~~Waveform follows the music~~: `Services/AudioTap.swift` uses a Core Audio process tap (macOS 14.2+) on the system output, FFT into 5 bands with auto-gain; bass in the middle bars. Runs only while something is playing. Needs the System Audio Recording permission (`NSAudioCaptureUsageDescription`); falls back to the generic animation when there's no signal. **Not yet tested with real audio.**
-- [x] **Explicit "E" badge** next to the title (from `kMRMediaRemoteNowPlayingInfoIsExplicitTrack`; confirmed the flag arrives for Apple Music tracks)
-- [x] **One thing plays at a time**: when a different app starts playing, the previous one is paused via `MRMediaRemoteSendCommandToApp` (`pauseapp <bundle>` helper command). Command confirmed not to crash the helper; **the actual Music-to-browser handover not yet tested by hand.**
-- [x] Menu toggles: "Waveform Follows Music", "Pause Other Audio When Something New Plays"
-- Minimum macOS is now 14.2
+### The island
+- Borderless panel above the menu bar, on all Spaces and over full-screen apps
+- **Notch style:** grows out of the hardware notch; expanded content sits fully below the notch
+- **Floating pill style** (no notch): capsule detached from the top edge, hidden when idle, all corners rounded when expanded. Toggle in the menu bar: "Floating Pill Style (No Notch)"
+- Expanded size 400 pt wide (Apple's is 371-408), continuous corners, bouncy open and calm close
+- Hover to expand (0.12 s delay) or click; collapses on leave or outside click; clicks pass through everywhere else
+- Haptic feedback on expand
 
-- [x] **More live activities** (`Services/ActivityServices.swift`), each with a menu toggle:
-  - **Calendar** (EventKit): event starting within 10 min shows a countdown in the notch; alerts at 10 min and at start; new Calendar tab lists the next two events
-  - **Headphones**: alert with name and battery when Bluetooth headphones become the audio output, and on disconnect. Detected from the audio device list (no Bluetooth permission); battery read from `system_profiler SPBluetoothDataType`
-  - **Camera / mic in use**: green camera or orange mic indicator (CoreMediaIO / CoreAudio "is running somewhere", polled every 2 s); lowest priority, shows only when nothing else is in the notch
-  - **Focus and Caps Lock** alerts. Focus is read from `~/Library/DoNotDisturb/DB/Assertions.json` (needs Full Disk Access) or `INFocusStatusCenter`; **may not work without Full Disk Access, untested**
-  - All of these are **untested with real events/devices**; only the rendering is verified
-  - Not possible: reading the iPhone's Live Activities (no API)
+### Now Playing
+- Works with **any app**: Apple Music, Spotify, YouTube and other browser audio
+- Title, artist, album art (glides from compact into expanded), scrubber with seek, play/pause/next/previous
+- Explicit **"E" badge**
+- Source app icon in the player; click to open that app. Live streams show "LIVE"
+- **One thing plays at a time:** starting audio in another app pauses the previous one (menu toggle)
+- **No waveform** (removed at the user's request; see Removed)
 
-- [x] **Two variants** (v1.1.0): `DynamicIsland-Notch.zip` and `DynamicIsland-NoNotch.zip`, built by `make release`. Same code; the only difference is the Info.plist key `DIDefaultStyle` (`auto` / `pill`), which sets the default of the "Floating Pill Style" menu toggle
-- [x] **Floating pill style** for Macs without a notch: capsule detached from the top edge, all four corners rounded when expanded, hidden when idle. On a notched screen it sits just below the notch
+### Timer
+- 8 presets, countdown in the notch, pause/resume/cancel, "Done" alert with chime
+- Timer bubble beside the island while music is showing
+- **Clock app timers show in the island** (read-only, with an "open Clock" button)
 
-- [x] **Clock app timers** show in the island (read-only): `TimerService.syncWithClockApp()` polls the `com.apple.mobiletimerd` preferences every 1.5 s. A Clock timer shows an "open Clock" button instead of pause/cancel, and the island doesn't play its own chime for it. **The running/paused data format is assumed (fire date under `$MTTimerDate`, paused = state 2) and has not been checked against a live Clock timer.** Timers started in the island do not appear in Clock (no API).
+### Other activities (each has a menu toggle)
+- Volume HUD
+- Battery: charging alert, low-battery alert at ≤20%, % in the expanded header
+- Calendar: countdown when an event is within 10 minutes; Calendar tab with the next two events
+- Headphones: name + battery on connect, "Disconnected" on disconnect
+- Camera / mic in-use indicator
+- Focus and Caps Lock alerts
 
-### Fixes
-- **2026-11-15 · Repeated permission prompts.** Three causes: (1) at launch `refresh()` ran the AppleScript fallback before the media helper had reported, triggering "control Music"; now AppleScript is used only if the helper is missing or has failed for good (`bridge.isUsable`). (2) Calendar and Focus access were requested at every launch; Calendar is now requested only when the user clicks "Allow" in the Calendar tab, and the Focus request is removed. (3) The app is ad-hoc signed, so every rebuild is a "new app" to macOS and loses earlier grants; unavoidable without a real signing identity. **Rule: never request a permission at launch.**
-- **2026-11-15 · Waveform removed entirely** at the user's request (not just the audio-reactive part). `WaveformView` is deleted; compact music shows album art only. Do not re-add.
-- **2026-11-15 · Removed the audio-reactive waveform.** The Core Audio process tap made macOS show the "record your system audio" prompt every time music started (the grant doesn't stick for this ad-hoc signed app). `AudioTap.swift`, its menu toggle and `NSAudioCaptureUsageDescription` are gone; the bars are back to the generic animation, which needs no permission. Don't re-add a tap unless the app gets a stable signing identity.
-- **2026-11-15 · Notch collisions.** At 400 pt wide the island left only ~77 pt beside the 185 pt notch: the title sat jammed under it and the third tab was hidden behind it. Expanded content now starts fully below the notch (`contentTop`). Found by drawing the notch into snapshots: `SHOW_NOTCH=1 DynamicIsland --snapshot <dir>`.
-- **2026-11-15 · Play/pause flicker + Next pausing the song.** Causes: (1) the button flipped optimistically, then a status query that started *before* the click came back with the old state and flipped it back; (2) `next track` can leave Music paused, and Music briefly reports "Paused" mid-skip. Fix in `NowPlayingService`: explicit `play`/`pause` instead of the `playpause` toggle; a command generation counter that drops stale query results; a short "expected state" window that trusts the user's click over transitional reports; skip resumes playback if it was playing; distributed-notification `Player State` applied instantly.
+### Menu bar item
+Toggles for: floating pill style, expand on hover, haptics, volume HUD, battery alerts, calendar, headphones, camera/mic, Focus & Caps Lock, pause other audio, Launch at Login. Plus Quit.
 
-### Not yet verified on device
-- [ ] Hover/click interactions by hand (couldn't screen-record from the terminal)
-- [ ] Music permission prompt flow + real track/artwork with Music.app playing
+---
+
+## Not yet verified by hand
+
+Everything below was checked only in rendered snapshots or by reading system data, never seen working on the real screen:
+
+- [ ] Hover / click / animations on the real notch
+- [ ] YouTube (browser) audio showing and being controlled
+- [ ] Music-to-browser handover (previous app pausing)
+- [ ] **Clock app timer mirroring**: the data format for a *running* timer is assumed (fire date under `$MTTimerDate`; paused = state 2). Only stopped timers were observed. If a Clock timer doesn't appear, read `defaults read com.apple.mobiletimerd MTTimers` while one runs and fix `TimerService.syncWithClockApp()`
+- [ ] Calendar countdown with a real event; Calendar "Allow" button flow
+- [ ] Headphone connect/disconnect and battery read
+- [ ] Camera / mic indicator
+- [ ] Focus alert (likely needs Full Disk Access; may not work at all)
+- [ ] Caps Lock alert
+- [ ] Floating pill style on a Mac that really has no notch
 - [ ] Spotify (not installed on the dev machine)
+- [ ] CPU while music plays (was 8-10% of a core with the waveform; not re-measured since it was removed)
+
+---
+
+## Removed (do not re-add without asking)
+
+- **Waveform, entirely.** First the audio-reactive version (`AudioTap.swift`, a Core Audio process tap) was removed because macOS showed the "record your system audio" prompt every time music started. Then the user asked for no waveform at all, so `WaveformView` was deleted too. Compact music shows album art only.
+- **Focus authorization request** (`INFocusStatusCenter.requestAuthorization`): removed as part of stopping launch-time prompts.
+
+---
+
+## Fix history
+
+- **2026-11-15 · Repeated permission prompts.** Causes: (1) at launch `refresh()` ran the AppleScript fallback before the media helper had reported, triggering "control Music"; AppleScript is now used only if the helper is missing or has failed for good (`bridge.isUsable`). (2) Calendar and Focus access were requested at every launch; Calendar is now requested only from the "Allow" button in the Calendar tab. (3) The app is ad-hoc signed, so every rebuild is a "new app" to macOS and loses earlier grants.
+- **2026-11-15 · Notch collisions.** At 400 pt wide the island left only ~77 pt beside the 185 pt notch: the title sat jammed under it and the third tab was hidden behind it. Expanded content now starts below the notch (`contentTop`). Found by drawing the notch into snapshots: `SHOW_NOTCH=1 DynamicIsland --snapshot <dir>`.
+- **2026-11-15 · Artwork not updating between albums.** `-[NSData hash]` only looks at the first bytes, which match across JPEGs. The helper now sends a change counter.
+- **2026-11-15 · Play/pause flicker + Next pausing the song.** Explicit `play`/`pause` instead of the toggle; stale status results dropped (generation counter); a short window that trusts the user's click over transitional reports; skip resumes playback if it was playing.
+
+---
+
+## Release history
+
+| Version | What changed |
+|---|---|
+| v1.0.0 | First public version: notch island, Music/Spotify via AppleScript, timer, volume, battery |
+| v1.1.0 | Any-app audio (browser/YouTube), Apple-style redesign, E badge, pause previous player, calendar, headphones, camera/mic, Focus/Caps Lock, notch fix, Notch + NoNotch downloads |
+| v1.1.1 | Removed the audio-reactive waveform (system audio prompt) |
+| v1.1.2 | Waveform removed entirely; Clock app timers in the island; no permission requests at launch |
+
+How to release: bump `VERSION` in `scripts/build-app.sh`, run `make release`, tag, push, then `gh release create <tag> build/release/*.zip`.
 
 ---
 
 ## Next ideas (roadmap)
+
+- [ ] Stable code-signing identity (Apple Developer account) so permission grants survive updates; also enables notarization
+- [ ] Start/pause/cancel Clock app timers from the island (no public API; would need Shortcuts)
 - [ ] Brightness HUD (DisplayServices private API)
-- [ ] Calendar: next event + "starting in 5 min" live activity (EventKit)
-- [ ] AirPods / Bluetooth connect animation with battery levels
 - [ ] File shelf: drag files onto the notch to hold them temporarily
 - [ ] Clipboard history tab
-- [ ] Swipe gestures on the island (two-finger swipe = next/prev track)
-- [ ] Settings window (SwiftUI) instead of only the menu
+- [ ] Swipe gestures on the island (two-finger swipe = next/previous track)
+- [ ] Settings window instead of only the menu
 - [ ] Custom timer duration input
-- [ ] Notarized release + GitHub Releases download (needs Apple Developer account)
 - [ ] Homebrew cask
+- Not possible: showing the iPhone's Live Activities (Apple provides no API)
 
 ---
 
 ## Decisions & gotchas
-- **No `@State` in views**: on the macOS 27 SDK, `@State` is a macro and the Command Line Tools don't ship the SwiftUI macro plugin. Views use small `ObservableObject` holders with `@StateObject` instead (`HoverState`, `ScrubState`). Keep this rule unless the project moves to full Xcode.
+
+- **Never request a permission at launch.** Ask only when the user clicks something that needs it.
+- **Privacy:** commits use the GitHub noreply identity (set in this repo's local git config). Check `git log --format='%ae'` before every push; no personal paths or emails in files.
+- **No `@State` in views:** on the macOS 27 SDK, `@State` is a macro and the Command Line Tools don't ship the SwiftUI macro plugin. Views use small `ObservableObject` holders with `@StateObject` (`HoverState`, `ScrubState`).
 - **Swift language mode 5** (`swift-tools-version:5.10`) to avoid Swift 6 strict-concurrency churn.
-- **MediaRemote through perl**: direct MediaRemote calls are blocked for third-party apps since macOS 15.4, but Apple-signed `/usr/bin/perl` is allowed, so the adapter dylib is loaded there. Paths passed to perl must be absolute (hardened runtime rejects relative dylib paths). Artwork changes are tracked with a counter, not `-[NSData hash]` (it collides across JPEGs). When the bridge is alive, AppleScript is not used at all.
-- **AppleScript fallback**: Updates are instant through the players' distributed notifications (`com.apple.Music.playerInfo`, `com.spotify.client.PlaybackStateChanged`), with a 3 s poll while playing to keep the scrubber in sync. Scripts only run when the player is **already running**, so they never launch it.
-- **Mouse pass-through**: the panel is 680×320 but `ignoresMouseEvents` is toggled from a global mouse-move monitor, so only the island itself is clickable (no Accessibility permission needed).
+- **MediaRemote through perl:** direct MediaRemote calls are blocked for third-party apps since macOS 15.4, but Apple-signed `/usr/bin/perl` is allowed, so `bridge/MediaRemoteAdapter.m` (dylib) is loaded there by `bridge/mr-bridge.pl`. JSON lines out; commands in on stdin (`play`, `pause`, `next`, `previous`, `seek <s>`, `pauseapp <bundle>`, `refresh`). Paths passed to perl must be absolute.
+- **AppleScript is fallback only** (Music/Spotify), used when the helper is missing or has failed more than 5 times. Scripts only run when the player is already running, so they never launch it.
+- **Two variants, one codebase:** the downloads differ only in the Info.plist key `DIDefaultStyle` (`auto` / `pill`), which sets the default of the pill-style toggle.
+- **Clock timers** are read from the `com.apple.mobiletimerd` preferences (polled every 1.5 s). Read-only.
+- **Headphones** are detected from the default audio output's transport type (no Bluetooth permission); battery comes from `system_profiler SPBluetoothDataType -json`.
+- **Mouse pass-through:** the panel is 680×320 but `ignoresMouseEvents` is toggled from a global mouse-move monitor, so only the island is clickable (no Accessibility permission).
+- **Snapshots:** `DynamicIsland --snapshot <dir>` renders every state to PNG; add `SHOW_NOTCH=1` to draw the physical notch and catch collisions. Always check new layouts with the notch drawn.
 - The build script runs `xattr -cr` before `codesign` because the Desktop folder adds Finder metadata that breaks signing.
-- Ad-hoc signing means macOS may re-ask for the Automation permission after each rebuild.
+- **Ad-hoc signing:** every rebuild looks like a new app to macOS, so previously granted permissions are forgotten after an update.
+- **Testing caution:** commands sent to the media helper act on the user's real playback. Use read-only probes unless a test needs otherwise, and say so.
