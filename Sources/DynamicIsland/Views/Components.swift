@@ -93,38 +93,6 @@ struct ArtworkView: View {
     }
 }
 
-/// The bouncing bars from the iOS Music live activity.
-struct WaveformView: View {
-    var isPlaying: Bool
-    var color: Color
-    var barCount = 5
-    var barWidth: CGFloat = 2.5
-    var spacing: CGFloat = 2
-    var maxHeight: CGFloat = 14
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: !isPlaying)) { context in
-            let t = context.date.timeIntervalSinceReferenceDate
-            HStack(alignment: .center, spacing: spacing) {
-                ForEach(0..<barCount, id: \.self) { i in
-                    Capsule()
-                        .fill(color)
-                        .frame(width: barWidth, height: max(barWidth, maxHeight * level(t, i)))
-                }
-            }
-            .frame(height: maxHeight)
-        }
-    }
-
-    private func level(_ t: Double, _ i: Int) -> CGFloat {
-        guard isPlaying else { return 0.22 }
-        let d = Double(i)
-        let a = sin(t * (6.3 + d * 1.9) + d * 1.7) * 0.5 + 0.5
-        let b = sin(t * (2.9 + d * 0.8) + d * 0.6) * 0.5 + 0.5
-        return CGFloat(0.2 + 0.8 * (a * 0.6 + b * 0.4))
-    }
-}
-
 /// iOS-style battery glyph with a proportional fill.
 struct BatteryIcon: View {
     let level: Int

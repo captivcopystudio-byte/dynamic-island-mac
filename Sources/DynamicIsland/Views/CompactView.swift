@@ -89,7 +89,7 @@ struct CompactView: View {
     @ViewBuilder private var right: some View {
         switch kind {
         case .music:
-            Color.clear // waveform likewise
+            Color.clear
         case .timer:
             TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
                 Text(TimeFormat.countdown(vm.timer.remaining(at: ctx.date)))

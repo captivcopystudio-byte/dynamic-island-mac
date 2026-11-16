@@ -84,10 +84,9 @@ private struct BatteryHeader: View {
 
 // MARK: - Media
 
-/// Same arrangement as the iPhone's expanded Now Playing: art top-left, waveform top-right,
-/// title and artist beside the art, then the scrubber, then transport controls.
-/// The art and waveform themselves are drawn by `IslandRootView` so they can glide in from
-/// the compact island; this view just leaves room for them.
+/// Art top-left with title and artist beside it, then the scrubber, then transport controls.
+/// The art itself is drawn by `IslandRootView` so it can glide in from the compact island;
+/// this view just leaves room for it.
 struct MediaPlayerView: View {
     @ObservedObject var np: NowPlayingService
     let track: TrackInfo
@@ -117,7 +116,7 @@ struct MediaPlayerView: View {
                         .lineLimit(1)
                 }
                 .padding(.bottom, 2)
-                Spacer(minLength: 34) // waveform lives here
+                Spacer(minLength: 0)
             }
 
             ProgressRow(np: np, duration: track.duration)

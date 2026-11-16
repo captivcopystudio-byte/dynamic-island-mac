@@ -173,7 +173,7 @@ final class IslandViewModel: ObservableObject {
         CGSize(width: 400, height: contentTop + 134)
     }
 
-    /// Album art + waveform stay on screen and glide between compact and expanded.
+    /// Album art stays on screen and glides between compact and expanded.
     var showsMusicElements: Bool {
         guard nowPlaying.track != nil else { return false }
         return isExpanded ? tab == .media : compactKind == .music

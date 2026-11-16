@@ -8,7 +8,7 @@ An iPhone-style **Dynamic Island** that lives in the notch of your MacBook (Air 
 
 | | |
 |---|---|
-| 🎵 **Now Playing**: album art and live waveform in the notch. Hover to get the full player with scrubber, play/pause, next, and previous. Works with **any app**: Apple Music, Spotify, and **browser audio like YouTube** in Safari or Chrome. | ![](docs/screenshots/02-compact-music.png) |
+| 🎵 **Now Playing**: album art in the notch. Hover to get the full player with scrubber, play/pause, next, and previous. Works with **any app**: Apple Music, Spotify, and **browser audio like YouTube** in Safari or Chrome. | ![](docs/screenshots/02-compact-music.png) |
 | ⏱️ **Timer**: one-click presets (1 min to 1 hr), a countdown in the notch, pause/resume, and a chime when it's done. | ![](docs/screenshots/06-expanded-timer.png) |
 | 🫧 **Split island**: when music and a timer run together, the timer pops out into its own bubble, like on iPhone. | ![](docs/screenshots/05-music-plus-timer.png) |
 | 🔊 **Volume HUD**: changing the volume shows a live level bar. | ![](docs/screenshots/08-volume.png) |
@@ -23,7 +23,6 @@ Other details:
 - Starting audio in another app (say a YouTube tab) pauses whatever was playing before, like on iPhone
 - Expands on hover (or click), and collapses when you move away or click elsewhere
 - Trackpad haptic feedback when the island opens
-- Album-tinted waveform colours
 - Works across all Spaces and over full-screen apps
 - On Macs without a notch it shows as a floating pill at the top of the screen
 - Menu bar icon with settings: hover-to-expand, haptics, volume HUD, battery alerts, and Launch at Login
