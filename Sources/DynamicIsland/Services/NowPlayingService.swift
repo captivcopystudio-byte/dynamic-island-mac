@@ -126,7 +126,7 @@ final class NowPlayingService: ObservableObject {
     @objc private func playerChanged(_ note: Notification) {
         // The notification carries the authoritative state, so use it immediately
         // instead of waiting for an AppleScript round-trip.
-        if bridgeAlive {
+        if bridge.isUsable {
             bridge.send("refresh")
             return
         }
@@ -179,7 +179,10 @@ final class NowPlayingService: ObservableObject {
     }
 
     func refresh() {
-        if bridgeAlive {
+        // AppleScript makes macOS ask "allow Dynamic Island to control Music?". Only fall back
+        // to it if the media helper is missing or has failed for good, never just because
+        // the helper hasn't reported yet.
+        if bridge.isUsable {
             bridge.send("refresh")
             return
         }

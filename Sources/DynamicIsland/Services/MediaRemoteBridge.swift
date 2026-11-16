@@ -45,6 +45,9 @@ final class MediaRemoteBridge {
 
     var isAvailable: Bool { resources != nil }
 
+    /// The helper exists and hasn't permanently failed, so nothing else should be used.
+    var isUsable: Bool { isAvailable && consecutiveFailures <= 5 }
+
     func start() {
         guard process == nil, let res = resources else { return }
         let p = Process()

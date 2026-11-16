@@ -18,6 +18,8 @@ struct UpcomingEvent: Equatable, Identifiable {
 final class CalendarService: ObservableObject {
     @Published private(set) var events: [UpcomingEvent] = []
     @Published private(set) var accessDenied = false
+    /// Not asked yet. The app never asks on its own: only when the user clicks "Allow".
+    @Published private(set) var needsPermission = false
     /// Bumped every 15 s so countdown labels and "starting soon" state stay fresh.
     @Published private(set) var tick = 0
 
@@ -35,7 +37,11 @@ final class CalendarService: ObservableObject {
         let t = Timer(timeInterval: 15, repeats: true) { [weak self] _ in self?.heartbeat() }
         RunLoop.main.add(t, forMode: .common)
         timer = t
-        requestAccess()
+        switch EKEventStore.authorizationStatus(for: .event) {
+        case .fullAccess: reload()
+        case .notDetermined: needsPermission = true
+        default: accessDenied = true
+        }
     }
 
     func applyDemo(events: [UpcomingEvent]) {
@@ -52,6 +58,7 @@ final class CalendarService: ObservableObject {
         case .notDetermined:
             store.requestFullAccessToEvents { [weak self] granted, _ in
                 DispatchQueue.main.async {
+                    self?.needsPermission = false
                     self?.accessDenied = !granted
                     if granted { self?.reload() }
                 }
@@ -303,9 +310,6 @@ final class SystemStateService {
     private var count = 0
 
     init() {
-        if Bundle.main.bundleIdentifier != nil {
-            INFocusStatusCenter.default.requestAuthorization { _ in }
-        }
         focused = Self.readFocus()
         let t = Timer(timeInterval: 0.3, repeats: true) { [weak self] _ in self?.poll() }
         RunLoop.main.add(t, forMode: .common)

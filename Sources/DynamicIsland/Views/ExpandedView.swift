@@ -270,7 +270,11 @@ struct CalendarPanel: View {
     @ObservedObject var calendar: CalendarService
 
     var body: some View {
-        if calendar.accessDenied {
+        if calendar.needsPermission {
+            message("See Your Next Event", "Calendar access is needed.", button: "Allow") {
+                calendar.requestAccess()
+            }
+        } else if calendar.accessDenied {
             message("Calendar Access Needed", "Allow under Privacy › Calendars.", button: "Settings") {
                 calendar.openPrivacySettings()
             }
