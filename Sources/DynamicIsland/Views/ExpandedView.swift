@@ -9,8 +9,9 @@ struct ExpandedView: View {
     var body: some View {
         Group {
             if vm.tab == .media, let track = vm.nowPlaying.track {
-                MediaPlayerView(np: vm.nowPlaying, track: track, showTimer: { vm.tab = .timer },
-                                timerActive: vm.timer.isActive)
+                MediaPlayerView(np: vm.nowPlaying, track: track, showTab: { vm.tab = $0 },
+                                timerActive: vm.timer.isActive,
+                                eventSoon: vm.calendar.imminentEvent() != nil)
                     .padding(.top, vm.contentTop)
             } else {
                 VStack(spacing: 0) {
@@ -90,8 +91,10 @@ private struct BatteryHeader: View {
 struct MediaPlayerView: View {
     @ObservedObject var np: NowPlayingService
     let track: TrackInfo
-    let showTimer: () -> Void
+    /// The player hides the tab bar, so it carries its own shortcuts to the other tabs.
+    let showTab: (IslandTab) -> Void
     let timerActive: Bool
+    let eventSoon: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -123,20 +126,14 @@ struct MediaPlayerView: View {
                 .padding(.top, 9)
 
             ZStack {
-                HStack(spacing: 34) {
+                HStack(spacing: 24) {
                     transport("backward.fill", size: 19) { np.previous() }
                     transport(np.isPlaying ? "pause.fill" : "play.fill", size: 27) { np.playPause() }
                     transport("forward.fill", size: 19) { np.next() }
                 }
-                HStack {
-                    Button(action: showTimer) {
-                        Image(systemName: "timer")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(timerActive ? Color.orange : Color.white.opacity(0.55))
-                            .frame(width: 32, height: 32)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(PressableButtonStyle())
+                HStack(spacing: 0) {
+                    tabShortcut(.timer, tint: timerActive ? Color.orange : Color.white.opacity(0.55))
+                    tabShortcut(.calendar, tint: eventSoon ? Color.red : Color.white.opacity(0.55))
                     Spacer()
                     if let icon = np.sourceIcon {
                         // Which app is playing (Safari, Chrome, Music, ...); click to open it.
@@ -153,6 +150,17 @@ struct MediaPlayerView: View {
             }
             .padding(.top, 3)
         }
+    }
+
+    private func tabShortcut(_ tab: IslandTab, tint: Color) -> some View {
+        Button { showTab(tab) } label: {
+            Image(systemName: tab.symbol)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 30, height: 32)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressableButtonStyle())
     }
 
     private func transport(_ symbol: String, size: CGFloat, action: @escaping () -> Void) -> some View {

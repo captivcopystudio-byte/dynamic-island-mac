@@ -77,6 +77,7 @@ Everything below was checked only in rendered snapshots or by reading system dat
 
 ## Fix history
 
+- **2026-11-16 · Calendar unreachable while music plays.** The player view replaces the tab bar, and it only had a timer shortcut. It now has timer and calendar shortcuts at the bottom-left (calendar turns red when an event is within 10 minutes). Rule: any new tab needs a shortcut in `MediaPlayerView` too. Not yet in a release (latest is v1.1.2).
 - **2026-11-15 · Repeated permission prompts.** Causes: (1) at launch `refresh()` ran the AppleScript fallback before the media helper had reported, triggering "control Music"; AppleScript is now used only if the helper is missing or has failed for good (`bridge.isUsable`). (2) Calendar and Focus access were requested at every launch; Calendar is now requested only from the "Allow" button in the Calendar tab. (3) The app is ad-hoc signed, so every rebuild is a "new app" to macOS and loses earlier grants.
 - **2026-11-15 · Notch collisions.** At 400 pt wide the island left only ~77 pt beside the 185 pt notch: the title sat jammed under it and the third tab was hidden behind it. Expanded content now starts below the notch (`contentTop`). Found by drawing the notch into snapshots: `SHOW_NOTCH=1 DynamicIsland --snapshot <dir>`.
 - **2026-11-15 · Artwork not updating between albums.** `-[NSData hash]` only looks at the first bytes, which match across JPEGs. The helper now sends a change counter.
