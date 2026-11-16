@@ -8,6 +8,7 @@ enum Main {
         let app = NSApplication.shared
         if let i = CommandLine.arguments.firstIndex(of: "--snapshot") {
             let dir = CommandLine.arguments.count > i + 1 ? CommandLine.arguments[i + 1] : "screenshots"
+            Prefs.registerDefaults()
             MainActor.assumeIsolated { Snapshotter.run(outputDir: dir) }
             return
         }
@@ -56,6 +57,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("Haptic Feedback", key: Prefs.haptics))
         menu.addItem(toggleItem("Show Volume HUD", key: Prefs.volumeHUD))
         menu.addItem(toggleItem("Show Battery Alerts", key: Prefs.batteryAlerts))
+        menu.addItem(toggleItem("Show Calendar Events", key: Prefs.calendarAlerts))
+        menu.addItem(toggleItem("Show Headphone Alerts", key: Prefs.deviceAlerts))
+        menu.addItem(toggleItem("Show Camera / Mic Indicator", key: Prefs.privacyIndicator))
+        menu.addItem(toggleItem("Show Focus & Caps Lock Alerts", key: Prefs.systemAlerts))
+        menu.addItem(.separator())
         menu.addItem(toggleItem("Waveform Follows Music", key: Prefs.liveWaveform))
         menu.addItem(toggleItem("Pause Other Audio When Something New Plays", key: Prefs.pauseOthers))
 
@@ -111,6 +117,10 @@ enum Prefs {
     static let volumeHUD = "showVolumeHUD"
     static let batteryAlerts = "showBatteryAlerts"
     static let liveWaveform = "liveWaveform"
+    static let calendarAlerts = "showCalendarEvents"
+    static let deviceAlerts = "showHeadphoneAlerts"
+    static let privacyIndicator = "showPrivacyIndicator"
+    static let systemAlerts = "showSystemAlerts"
     static let pauseOthers = "pauseOtherAudio"
 
     static let didChange = Notification.Name("DynamicIslandPrefsDidChange")
@@ -122,6 +132,10 @@ enum Prefs {
             volumeHUD: true,
             batteryAlerts: true,
             liveWaveform: true,
+            calendarAlerts: true,
+            deviceAlerts: true,
+            privacyIndicator: true,
+            systemAlerts: true,
             pauseOthers: true,
         ])
     }

@@ -18,6 +18,8 @@ enum Snapshotter {
             vm.timer.cancel()
             vm.nowPlaying.applyDemo(track: nil, playing: false, artwork: nil, position: 0)
             vm.battery.applyDemo(level: 82, charging: false)
+            vm.privacy.applyDemo(camera: false, mic: false)
+            vm.calendar.applyDemo(events: [])
             vm.applyDemo(expanded: false, transient: nil, tab: .media)
             setup()
             let view = ZStack(alignment: .top) {
@@ -76,6 +78,30 @@ enum Snapshotter {
         shot("09-charging") {
             vm.battery.applyDemo(level: 82, charging: true)
             vm.applyDemo(expanded: false, transient: .charging, tab: .media)
+        }
+        let standup = UpcomingEvent(id: "a", title: "Design Review", start: Date().addingTimeInterval(290),
+                                    end: Date().addingTimeInterval(2090), color: .systemBlue)
+        let lunch = UpcomingEvent(id: "b", title: "Lunch with Sam", start: Date().addingTimeInterval(5400),
+                                  end: Date().addingTimeInterval(9000), color: .systemOrange)
+        shot("11-headphones") {
+            vm.headphones.applyDemo(name: "AirPods Pro", battery: 87)
+            vm.applyDemo(expanded: false, transient: .headphonesOn, tab: .media)
+        }
+        shot("12-calendar-soon") {
+            vm.calendar.applyDemo(events: [standup, lunch])
+        }
+        shot("13-expanded-calendar") {
+            vm.calendar.applyDemo(events: [standup, lunch])
+            vm.applyDemo(expanded: true, transient: nil, tab: .calendar)
+        }
+        shot("14-camera-in-use") {
+            vm.privacy.applyDemo(camera: true, mic: false)
+        }
+        shot("15-focus") {
+            vm.applyDemo(expanded: false, transient: .focusOn, tab: .media)
+        }
+        shot("16-caps-lock") {
+            vm.applyDemo(expanded: false, transient: .capsOn, tab: .media)
         }
         shot("10-nothing-playing") {
             vm.applyDemo(expanded: true, transient: nil, tab: .media)

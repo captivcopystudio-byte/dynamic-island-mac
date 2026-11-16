@@ -52,6 +52,37 @@ struct CompactView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .fixedSize()
+        case .headphonesOn, .headphonesOff:
+            HStack(spacing: 6) {
+                Image(systemName: vm.headphones.symbol)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(kind == .headphonesOn ? Color.white : Color.white.opacity(0.5))
+                Text(shortName(vm.headphones.name))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 92, alignment: .leading)
+                    .fixedSize()
+            }
+        case .focusOn, .focusOff:
+            label("moon.fill", "Focus", tint: kind == .focusOn ? Color.indigo : Color.white.opacity(0.5))
+        case .capsOn, .capsOff:
+            label(kind == .capsOn ? "capslock.fill" : "capslock", "Caps Lock",
+                  tint: kind == .capsOn ? Color.green : Color.white.opacity(0.5))
+        case .calendar:
+            HStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 1.5)
+                    .fill(Color(nsColor: vm.calendar.imminentEvent()?.color ?? .systemRed))
+                    .frame(width: 3, height: 15)
+                Image(systemName: "calendar")
+                    .font(.system(size: symbolSize, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+        case .privacy:
+            Image(systemName: vm.privacy.cameraInUse ? "video.fill" : "mic.fill")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(vm.privacy.cameraInUse ? Color.green : Color.orange)
         }
     }
 
@@ -96,6 +127,64 @@ struct CompactView: View {
                 BatteryIcon(level: vm.battery.level, charging: false, tint: .red)
             }
             .fixedSize()
+        case .headphonesOn:
+            if let battery = vm.headphones.battery {
+                HStack(spacing: 5) {
+                    Text("\(battery)%")
+                        .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(battery <= 20 ? Color.red : Color.green)
+                    BatteryIcon(level: battery, charging: false, tint: battery <= 20 ? .red : .green)
+                }
+                .fixedSize()
+            } else {
+                status("Connected", .green)
+            }
+        case .headphonesOff:
+            status("Disconnected", .white.opacity(0.55))
+        case .focusOn, .capsOn:
+            status("On", kind == .focusOn ? .indigo : .green)
+        case .focusOff, .capsOff:
+            status("Off", .white.opacity(0.55))
+        case .calendar:
+            Text(countdown)
+                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Color(nsColor: vm.calendar.imminentEvent()?.color ?? .systemRed))
+                .fixedSize()
+        case .privacy:
+            Circle()
+                .fill(vm.privacy.cameraInUse ? Color.green : Color.orange)
+                .frame(width: 7, height: 7)
         }
+    }
+
+    private func label(_ symbol: String, _ text: String, tint: Color) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: symbol)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(tint)
+            Text(text)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .fixedSize()
+        }
+    }
+
+    private func status(_ text: String, _ color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(color)
+            .fixedSize()
+    }
+
+    /// "Mo's AirPods Pro" is too long for the notch; keep the product name.
+    private func shortName(_ name: String) -> String {
+        for product in ["AirPods Max", "AirPods Pro", "AirPods"] where name.contains(product) { return product }
+        return name
+    }
+
+    private var countdown: String {
+        guard let event = vm.calendar.imminentEvent() else { return "" }
+        let minutes = Int((event.start.timeIntervalSinceNow / 60).rounded(.up))
+        return minutes <= 0 ? "Now" : "in \(minutes)m"
     }
 }

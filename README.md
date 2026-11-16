@@ -14,6 +14,10 @@ An iPhone-style **Dynamic Island** that lives in the notch of your MacBook (Air 
 | 🔊 **Volume HUD**: changing the volume shows a live level bar. | ![](docs/screenshots/08-volume.png) |
 | 🔋 **Battery**: "Charging" alert when you plug in, a low-battery warning at 20%, and battery % in the expanded header. | ![](docs/screenshots/09-charging.png) |
 
+| 📅 **Calendar**: a countdown appears when an event is about to start, and a Calendar tab lists what's next. | ![](docs/screenshots/13-expanded-calendar.png) |
+| 🎧 **Headphones**: name and battery when AirPods or other Bluetooth headphones connect. | ![](docs/screenshots/11-headphones.png) |
+| 🟢 **Camera / mic indicator**, plus brief **Focus** and **Caps Lock** alerts. | ![](docs/screenshots/14-camera-in-use.png) |
+
 Other details:
 - The waveform moves with the actual audio (asks once for the System Audio Recording permission; nothing is recorded or saved)
 - Explicit tracks get the "E" badge

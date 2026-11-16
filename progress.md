@@ -45,6 +45,14 @@ Update this file at the end of every work session.
 - [x] Menu toggles: "Waveform Follows Music", "Pause Other Audio When Something New Plays"
 - Minimum macOS is now 14.2
 
+- [x] **More live activities** (`Services/ActivityServices.swift`), each with a menu toggle:
+  - **Calendar** (EventKit): event starting within 10 min shows a countdown in the notch; alerts at 10 min and at start; new Calendar tab lists the next two events
+  - **Headphones**: alert with name and battery when Bluetooth headphones become the audio output, and on disconnect. Detected from the audio device list (no Bluetooth permission); battery read from `system_profiler SPBluetoothDataType`
+  - **Camera / mic in use**: green camera or orange mic indicator (CoreMediaIO / CoreAudio "is running somewhere", polled every 2 s); lowest priority, shows only when nothing else is in the notch
+  - **Focus and Caps Lock** alerts. Focus is read from `~/Library/DoNotDisturb/DB/Assertions.json` (needs Full Disk Access) or `INFocusStatusCenter`; **may not work without Full Disk Access, untested**
+  - All of these are **untested with real events/devices**; only the rendering is verified
+  - Not possible: reading the iPhone's Live Activities (no API)
+
 ### Fixes
 - **2026-11-15 · Play/pause flicker + Next pausing the song.** Causes: (1) the button flipped optimistically, then a status query that started *before* the click came back with the old state and flipped it back; (2) `next track` can leave Music paused, and Music briefly reports "Paused" mid-skip. Fix in `NowPlayingService`: explicit `play`/`pause` instead of the `playpause` toggle; a command generation counter that drops stale query results; a short "expected state" window that trusts the user's click over transitional reports; skip resumes playback if it was playing; distributed-notification `Player State` applied instantly.
 

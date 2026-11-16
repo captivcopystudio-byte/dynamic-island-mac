@@ -13,6 +13,9 @@ let package = Package(
                 .linkedFramework("CoreAudio"),
                 .linkedFramework("AudioToolbox"),
                 .linkedFramework("ServiceManagement"),
+                .linkedFramework("CoreMediaIO"),
+                .linkedFramework("EventKit"),
+                .linkedFramework("Intents"),
             ]
         )
     ]

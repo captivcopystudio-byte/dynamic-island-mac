@@ -51,6 +51,12 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>NSHighResolutionCapable</key><true/>
   <key>NSAudioCaptureUsageDescription</key>
   <string>Dynamic Island listens to the audio that's playing so the waveform can move with the music. Nothing is recorded or saved.</string>
+  <key>NSCalendarsFullAccessUsageDescription</key>
+  <string>Dynamic Island shows your next calendar event in the notch.</string>
+  <key>NSCalendarsUsageDescription</key>
+  <string>Dynamic Island shows your next calendar event in the notch.</string>
+  <key>NSFocusStatusUsageDescription</key>
+  <string>Dynamic Island shows a brief alert when Focus turns on or off.</string>
   <key>NSAppleEventsUsageDescription</key>
   <string>Dynamic Island uses Apple Events to show and control what's playing in Music and Spotify.</string>
 </dict>

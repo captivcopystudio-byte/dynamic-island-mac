@@ -3,12 +3,13 @@ import Combine
 import SwiftUI
 
 enum IslandTab: String, CaseIterable, Hashable {
-    case media, timer
+    case media, timer, calendar
 
     var symbol: String {
         switch self {
         case .media: return "music.note"
         case .timer: return "timer"
+        case .calendar: return "calendar"
         }
     }
 }
@@ -16,11 +17,31 @@ enum IslandTab: String, CaseIterable, Hashable {
 /// Short-lived alerts that take over the compact island for a moment.
 enum Transient: Hashable {
     case volume, charging, lowBattery, timerDone
+    case headphonesOn, headphonesOff, focusOn, focusOff, capsOn, capsOff, eventSoon
+
+    var kind: CompactKind {
+        switch self {
+        case .volume: return .volume
+        case .charging: return .charging
+        case .lowBattery: return .lowBattery
+        case .timerDone: return .timerDone
+        case .headphonesOn: return .headphonesOn
+        case .headphonesOff: return .headphonesOff
+        case .focusOn: return .focusOn
+        case .focusOff: return .focusOff
+        case .capsOn: return .capsOn
+        case .capsOff: return .capsOff
+        case .eventSoon: return .calendar
+        }
+    }
 }
 
 /// What the collapsed island is currently showing.
 enum CompactKind: Hashable {
     case music, timer, volume, charging, lowBattery, timerDone
+    case headphonesOn, headphonesOff, focusOn, focusOff, capsOn, capsOff
+    case calendar // an event is about to start
+    case privacy  // camera or microphone in use
 }
 
 struct LayoutKey: Hashable {
@@ -42,6 +63,10 @@ final class IslandViewModel: ObservableObject {
     let battery = BatteryService()
     let volume = VolumeService()
     let timer = TimerService()
+    let calendar = CalendarService()
+    let headphones = HeadphoneService()
+    let privacy = PrivacyService()
+    private let systemState = SystemStateService()
 
     private var isHovering = false
     private var hoverWork: DispatchWorkItem?
@@ -54,7 +79,10 @@ final class IslandViewModel: ObservableObject {
             nowPlaying.objectWillChange.eraseToAnyPublisher(),
             battery.objectWillChange.eraseToAnyPublisher(),
             volume.objectWillChange.eraseToAnyPublisher(),
-            timer.objectWillChange.eraseToAnyPublisher()
+            timer.objectWillChange.eraseToAnyPublisher(),
+            calendar.objectWillChange.eraseToAnyPublisher(),
+            headphones.objectWillChange.eraseToAnyPublisher(),
+            privacy.objectWillChange.eraseToAnyPublisher()
         )
         .receive(on: RunLoop.main)
         .sink { [weak self] in self?.objectWillChange.send() }
@@ -69,7 +97,30 @@ final class IslandViewModel: ObservableObject {
         NotificationCenter.default.publisher(for: Prefs.didChange)
             .sink { [weak self] _ in self?.updateAudioTap() }
             .store(in: &cancellables)
-        volume.onDeviceChange = { AudioTap.shared.restart() }
+        volume.onDeviceChange = { [weak self] in
+            AudioTap.shared.restart()
+            self?.headphones.outputDeviceChanged()
+        }
+        headphones.onConnect = { [weak self] in
+            guard Prefs.bool(Prefs.deviceAlerts) else { return }
+            self?.showTransient(.headphonesOn, for: 4)
+        }
+        headphones.onDisconnect = { [weak self] in
+            guard Prefs.bool(Prefs.deviceAlerts) else { return }
+            self?.showTransient(.headphonesOff, for: 2.5)
+        }
+        calendar.onEventSoon = { [weak self] _ in
+            guard Prefs.bool(Prefs.calendarAlerts) else { return }
+            self?.showTransient(.eventSoon, for: 6)
+        }
+        systemState.onFocusChange = { [weak self] on in
+            guard Prefs.bool(Prefs.systemAlerts) else { return }
+            self?.showTransient(on ? .focusOn : .focusOff, for: 2.5)
+        }
+        systemState.onCapsLockChange = { [weak self] on in
+            guard Prefs.bool(Prefs.systemAlerts) else { return }
+            self?.showTransient(on ? .capsOn : .capsOff, for: 1.6)
+        }
 
         volume.onChange = { [weak self] in
             guard Prefs.bool(Prefs.volumeHUD) else { return }
@@ -100,16 +151,11 @@ final class IslandViewModel: ObservableObject {
     // MARK: - Derived state
 
     var compactKind: CompactKind? {
-        if let transient {
-            switch transient {
-            case .volume: return .volume
-            case .charging: return .charging
-            case .lowBattery: return .lowBattery
-            case .timerDone: return .timerDone
-            }
-        }
+        if let transient { return transient.kind }
         if nowPlaying.isPlaying && nowPlaying.track != nil { return .music }
         if timer.isActive { return .timer }
+        if Prefs.bool(Prefs.calendarAlerts), calendar.imminentEvent() != nil { return .calendar }
+        if Prefs.bool(Prefs.privacyIndicator), privacy.cameraInUse || privacy.micInUse { return .privacy }
         return nil
     }
 
@@ -148,6 +194,11 @@ final class IslandViewModel: ObservableObject {
         case .volume: return 82
         case .charging: return 88
         case .lowBattery: return 98
+        case .headphonesOn, .headphonesOff: return 128
+        case .focusOn, .focusOff: return 78
+        case .capsOn, .capsOff: return 100
+        case .calendar: return 70
+        case .privacy: return 38
         }
     }
 

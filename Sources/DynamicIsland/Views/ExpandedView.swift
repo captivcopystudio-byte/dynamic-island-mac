@@ -18,6 +18,7 @@ struct ExpandedView: View {
                         switch vm.tab {
                         case .media: NothingPlayingView(np: vm.nowPlaying)
                         case .timer: TimerPanel(timer: vm.timer)
+                        case .calendar: CalendarPanel(calendar: vm.calendar)
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -276,6 +277,90 @@ private struct NothingPlayingView: View {
                 .contentShape(Capsule())
         }
         .buttonStyle(PressableButtonStyle(hoverCircle: false))
+    }
+}
+
+// MARK: - Calendar
+
+struct CalendarPanel: View {
+    @ObservedObject var calendar: CalendarService
+
+    var body: some View {
+        if calendar.accessDenied {
+            message("Calendar Access Needed", "Allow under Privacy › Calendars.", button: "Settings") {
+                calendar.openPrivacySettings()
+            }
+        } else if calendar.events.isEmpty {
+            message("No Upcoming Events", "Nothing in the next 24 hours.", button: nil) {}
+        } else {
+            VStack(spacing: 8) {
+                ForEach(calendar.events.prefix(2)) { event in
+                    HStack(spacing: 10) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(nsColor: event.color))
+                            .frame(width: 4, height: 34)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(event.title)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                            Text(event.start.formatted(date: .omitted, time: .shortened) + " – "
+                                 + event.end.formatted(date: .omitted, time: .shortened))
+                                .font(.system(size: 12, weight: .medium).monospacedDigit())
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                        Spacer(minLength: 6)
+                        Text(relative(event))
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color(nsColor: event.color))
+                            .fixedSize()
+                    }
+                }
+            }
+        }
+    }
+
+    private func relative(_ event: UpcomingEvent) -> String {
+        _ = calendar.tick // refreshes the label
+        let seconds = event.start.timeIntervalSinceNow
+        if seconds <= 0 { return "Now" }
+        let minutes = Int((seconds / 60).rounded(.up))
+        if minutes < 60 { return "in \(minutes)m" }
+        let hours = minutes / 60
+        return minutes % 60 == 0 ? "in \(hours)h" : "in \(hours)h \(minutes % 60)m"
+    }
+
+    private func message(_ title: String, _ detail: String, button: String?, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: "calendar")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundStyle(.white.opacity(0.45))
+                .frame(width: 58, height: 58)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.white.opacity(0.08)))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(detail)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+            if let button {
+                Button(action: action) {
+                    Text(button)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(Color.white.opacity(0.16)))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(PressableButtonStyle(hoverCircle: false))
+            }
+        }
     }
 }
 
