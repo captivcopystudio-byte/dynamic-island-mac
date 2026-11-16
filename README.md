@@ -27,8 +27,8 @@ Other details:
 Requires **macOS 14 or later** on Apple silicon, plus the Xcode Command Line Tools (`xcode-select --install`). You don't need the full Xcode.
 
 ```bash
-git clone <this-repo-url>
-cd dynamic-island
+git clone https://github.com/captivcopystudio-byte/dynamic-island-mac.git
+cd dynamic-island-mac
 make install     # builds "Dynamic Island.app", copies it to /Applications, launches it
 ```
 
