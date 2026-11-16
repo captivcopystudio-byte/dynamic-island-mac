@@ -63,7 +63,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("Show Camera / Mic Indicator", key: Prefs.privacyIndicator))
         menu.addItem(toggleItem("Show Focus & Caps Lock Alerts", key: Prefs.systemAlerts))
         menu.addItem(.separator())
-        menu.addItem(toggleItem("Waveform Follows Music", key: Prefs.liveWaveform))
         menu.addItem(toggleItem("Pause Other Audio When Something New Plays", key: Prefs.pauseOthers))
 
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
@@ -117,7 +116,6 @@ enum Prefs {
     static let haptics = "haptics"
     static let volumeHUD = "showVolumeHUD"
     static let batteryAlerts = "showBatteryAlerts"
-    static let liveWaveform = "liveWaveform"
     static let calendarAlerts = "showCalendarEvents"
     static let deviceAlerts = "showHeadphoneAlerts"
     static let privacyIndicator = "showPrivacyIndicator"
@@ -136,7 +134,6 @@ enum Prefs {
             haptics: true,
             volumeHUD: true,
             batteryAlerts: true,
-            liveWaveform: true,
             calendarAlerts: true,
             deviceAlerts: true,
             privacyIndicator: true,

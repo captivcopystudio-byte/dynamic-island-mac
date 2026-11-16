@@ -39,7 +39,7 @@ Update this file at the end of every work session.
   - Timer view like iPhone's: round pause/cancel buttons left, big orange countdown right
   - Waveform at 20 fps instead of 30 to cut CPU while playing (was ~8-10% of a core; not re-measured)
 
-- [x] **Waveform follows the music**: `Services/AudioTap.swift` uses a Core Audio process tap (macOS 14.2+) on the system output, FFT into 5 bands with auto-gain; bass in the middle bars. Runs only while something is playing. Needs the System Audio Recording permission (`NSAudioCaptureUsageDescription`); falls back to the generic animation when there's no signal. **Not yet tested with real audio.**
+- [removed, see Fixes] ~~Waveform follows the music~~: `Services/AudioTap.swift` uses a Core Audio process tap (macOS 14.2+) on the system output, FFT into 5 bands with auto-gain; bass in the middle bars. Runs only while something is playing. Needs the System Audio Recording permission (`NSAudioCaptureUsageDescription`); falls back to the generic animation when there's no signal. **Not yet tested with real audio.**
 - [x] **Explicit "E" badge** next to the title (from `kMRMediaRemoteNowPlayingInfoIsExplicitTrack`; confirmed the flag arrives for Apple Music tracks)
 - [x] **One thing plays at a time**: when a different app starts playing, the previous one is paused via `MRMediaRemoteSendCommandToApp` (`pauseapp <bundle>` helper command). Command confirmed not to crash the helper; **the actual Music-to-browser handover not yet tested by hand.**
 - [x] Menu toggles: "Waveform Follows Music", "Pause Other Audio When Something New Plays"
@@ -57,6 +57,7 @@ Update this file at the end of every work session.
 - [x] **Floating pill style** for Macs without a notch: capsule detached from the top edge, all four corners rounded when expanded, hidden when idle. On a notched screen it sits just below the notch
 
 ### Fixes
+- **2026-11-15 · Removed the audio-reactive waveform.** The Core Audio process tap made macOS show the "record your system audio" prompt every time music started (the grant doesn't stick for this ad-hoc signed app). `AudioTap.swift`, its menu toggle and `NSAudioCaptureUsageDescription` are gone; the bars are back to the generic animation, which needs no permission. Don't re-add a tap unless the app gets a stable signing identity.
 - **2026-11-15 · Notch collisions.** At 400 pt wide the island left only ~77 pt beside the 185 pt notch: the title sat jammed under it and the third tab was hidden behind it. Expanded content now starts fully below the notch (`contentTop`). Found by drawing the notch into snapshots: `SHOW_NOTCH=1 DynamicIsland --snapshot <dir>`.
 - **2026-11-15 · Play/pause flicker + Next pausing the song.** Causes: (1) the button flipped optimistically, then a status query that started *before* the click came back with the old state and flipped it back; (2) `next track` can leave Music paused, and Music briefly reports "Paused" mid-skip. Fix in `NowPlayingService`: explicit `play`/`pause` instead of the `playpause` toggle; a command generation counter that drops stale query results; a short "expected state" window that trusts the user's click over transitional reports; skip resumes playback if it was playing; distributed-notification `Player State` applied instantly.
 

@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 APP_NAME="Dynamic Island"
 BUNDLE_ID="com.opensource.dynamicisland"
-VERSION="${VERSION:-1.1.0}"
+VERSION="${VERSION:-1.1.1}"
 # VARIANT=notch (default): hugs the MacBook notch, falls back to a pill on screens without one.
 # VARIANT=pill: always a floating pill, for Macs with no notch.
 VARIANT="${VARIANT:-notch}"
@@ -55,8 +55,6 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>LSUIElement</key><true/>
   <key>DIDefaultStyle</key><string>${STYLE}</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSAudioCaptureUsageDescription</key>
-  <string>Dynamic Island listens to the audio that's playing so the waveform can move with the music. Nothing is recorded or saved.</string>
   <key>NSCalendarsFullAccessUsageDescription</key>
   <string>Dynamic Island shows your next calendar event in the notch.</string>
   <key>NSCalendarsUsageDescription</key>

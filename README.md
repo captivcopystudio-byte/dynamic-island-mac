@@ -19,7 +19,6 @@ An iPhone-style **Dynamic Island** that lives in the notch of your MacBook (Air 
 | 🟢 **Camera / mic indicator**, plus brief **Focus** and **Caps Lock** alerts. | ![](docs/screenshots/14-camera-in-use.png) |
 
 Other details:
-- The waveform moves with the actual audio (asks once for the System Audio Recording permission; nothing is recorded or saved)
 - Explicit tracks get the "E" badge
 - Starting audio in another app (say a YouTube tab) pauses whatever was playing before, like on iPhone
 - Expands on hover (or click), and collapses when you move away or click elsewhere
