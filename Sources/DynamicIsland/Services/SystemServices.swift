@@ -79,6 +79,7 @@ final class VolumeService: ObservableObject {
     @Published private(set) var isMuted = false
 
     var onChange: (() -> Void)?
+    var onDeviceChange: (() -> Void)?
 
     private var device = AudioObjectID(kAudioObjectUnknown)
     private var volumeAddress = AudioObjectPropertyAddress(
@@ -99,6 +100,7 @@ final class VolumeService: ObservableObject {
     }
     private lazy var deviceListener: AudioObjectPropertyListenerBlock = { [weak self] _, _ in
         self?.attachToDefaultDevice()
+        self?.onDeviceChange?()
     }
 
     init() {

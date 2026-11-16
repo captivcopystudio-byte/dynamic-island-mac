@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "DynamicIsland",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("14.2")], // 14.2: Core Audio process taps
     targets: [
         .executableTarget(
             name: "DynamicIsland",

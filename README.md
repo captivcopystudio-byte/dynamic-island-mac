@@ -15,6 +15,9 @@ An iPhone-style **Dynamic Island** that lives in the notch of your MacBook (Air 
 | 🔋 **Battery**: "Charging" alert when you plug in, a low-battery warning at 20%, and battery % in the expanded header. | ![](docs/screenshots/09-charging.png) |
 
 Other details:
+- The waveform moves with the actual audio (asks once for the System Audio Recording permission; nothing is recorded or saved)
+- Explicit tracks get the "E" badge
+- Starting audio in another app (say a YouTube tab) pauses whatever was playing before, like on iPhone
 - Expands on hover (or click), and collapses when you move away or click elsewhere
 - Trackpad haptic feedback when the island opens
 - Album-tinted waveform colours
@@ -24,7 +27,7 @@ Other details:
 
 ## Install
 
-Requires **macOS 14 or later** on Apple silicon, plus the Xcode Command Line Tools (`xcode-select --install`). You don't need the full Xcode.
+Requires **macOS 14.2 or later** on Apple silicon, plus the Xcode Command Line Tools (`xcode-select --install`). You don't need the full Xcode.
 
 ```bash
 git clone https://github.com/captivcopystudio-byte/dynamic-island-mac.git

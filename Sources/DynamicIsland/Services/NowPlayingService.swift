@@ -27,6 +27,7 @@ struct TrackInfo: Equatable {
     var artist: String
     var album: String
     var duration: Double
+    var isExplicit = false
 }
 
 private struct PlayerSnapshot {
@@ -58,6 +59,7 @@ final class NowPlayingService: ObservableObject {
     private var bridgeAlive = false       // helper has reported at least once
     private var usingBridge = false       // current track came from the bridge
     private var bridgeReportsPlaying = false
+    private var playingApp: String?       // app last seen playing and not yet seen paused
     private var artworkHash: UInt64 = 0
     private var artworkClearWork: DispatchWorkItem?
     private var ignoreDriftUntil = Date.distantPast
@@ -271,10 +273,24 @@ final class NowPlayingService: ObservableObject {
         }
         bridgeReportsPlaying = update.playing
 
+        // One thing plays at a time, like on iPhone: when a different app takes over
+        // (say a YouTube tab while Music is playing), pause the one it replaced.
+        let app = update.parent.isEmpty ? update.bundle : update.parent
+        if !app.isEmpty {
+            if update.playing {
+                if let previous = playingApp, previous != app, Prefs.bool(Prefs.pauseOthers) {
+                    bridge.send("pauseapp \(previous)")
+                }
+                playingApp = app
+            } else if app == playingApp {
+                playingApp = nil
+            }
+        }
+
         let newTrack = TrackInfo(
             id: update.id.isEmpty ? "\(update.title)|\(update.artist)" : update.id,
             title: update.title, artist: update.artist, album: update.album,
-            duration: update.duration)
+            duration: update.duration, isExplicit: update.explicit)
 
         // The reported elapsed time was true at `timestamp`; project it to now.
         var reported = update.elapsed

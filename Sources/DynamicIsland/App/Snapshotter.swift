@@ -11,7 +11,7 @@ enum Snapshotter {
         let vm = IslandViewModel()
         vm.geometry = NotchGeometry(notchSize: CGSize(width: 185, height: 33.5), hasNotch: true)
         let track = TrackInfo(id: "demo", title: "Midnight Drive", artist: "The Neon Coast",
-                              album: "Afterglow", duration: 214)
+                              album: "Afterglow", duration: 214, isExplicit: true)
         let art = demoArtwork()
 
         func shot(_ name: String, _ setup: () -> Void) {

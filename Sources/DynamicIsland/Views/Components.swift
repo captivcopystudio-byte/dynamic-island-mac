@@ -97,17 +97,26 @@ struct WaveformView: View {
     var maxHeight: CGFloat = 14
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: !isPlaying)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isPlaying)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
+            let live = isPlaying ? AudioTap.shared.levels() : nil
             HStack(alignment: .center, spacing: spacing) {
                 ForEach(0..<barCount, id: \.self) { i in
                     Capsule()
                         .fill(color)
-                        .frame(width: barWidth, height: max(barWidth, maxHeight * level(t, i)))
+                        .frame(width: barWidth, height: max(barWidth, maxHeight * (live.map { liveLevel($0, i) } ?? level(t, i))))
                 }
             }
             .frame(height: maxHeight)
         }
+    }
+
+    /// Bass in the middle, treble at the edges, so the shape stays balanced like Apple's.
+    private func liveLevel(_ bands: [Float], _ i: Int) -> CGFloat {
+        let order = [3, 1, 0, 2, 4]
+        let band = order[i % order.count]
+        guard band < bands.count else { return 0.2 }
+        return CGFloat(0.16 + 0.84 * bands[band])
     }
 
     private func level(_ t: Double, _ i: Int) -> CGFloat {

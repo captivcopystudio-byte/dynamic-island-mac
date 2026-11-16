@@ -46,9 +46,11 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundleShortVersionString</key><string>${VERSION}</string>
   <key>CFBundleVersion</key><string>1</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
+  <key>LSMinimumSystemVersion</key><string>14.2</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSAudioCaptureUsageDescription</key>
+  <string>Dynamic Island listens to the audio that's playing so the waveform can move with the music. Nothing is recorded or saved.</string>
   <key>NSAppleEventsUsageDescription</key>
   <string>Dynamic Island uses Apple Events to show and control what's playing in Music and Spotify.</string>
 </dict>

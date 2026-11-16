@@ -39,6 +39,12 @@ Update this file at the end of every work session.
   - Timer view like iPhone's: round pause/cancel buttons left, big orange countdown right
   - Waveform at 20 fps instead of 30 to cut CPU while playing (was ~8-10% of a core; not re-measured)
 
+- [x] **Waveform follows the music**: `Services/AudioTap.swift` uses a Core Audio process tap (macOS 14.2+) on the system output, FFT into 5 bands with auto-gain; bass in the middle bars. Runs only while something is playing. Needs the System Audio Recording permission (`NSAudioCaptureUsageDescription`); falls back to the generic animation when there's no signal. **Not yet tested with real audio.**
+- [x] **Explicit "E" badge** next to the title (from `kMRMediaRemoteNowPlayingInfoIsExplicitTrack`; confirmed the flag arrives for Apple Music tracks)
+- [x] **One thing plays at a time**: when a different app starts playing, the previous one is paused via `MRMediaRemoteSendCommandToApp` (`pauseapp <bundle>` helper command). Command confirmed not to crash the helper; **the actual Music-to-browser handover not yet tested by hand.**
+- [x] Menu toggles: "Waveform Follows Music", "Pause Other Audio When Something New Plays"
+- Minimum macOS is now 14.2
+
 ### Fixes
 - **2026-11-15 · Play/pause flicker + Next pausing the song.** Causes: (1) the button flipped optimistically, then a status query that started *before* the click came back with the old state and flipped it back; (2) `next track` can leave Music paused, and Music briefly reports "Paused" mid-skip. Fix in `NowPlayingService`: explicit `play`/`pause` instead of the `playpause` toggle; a command generation counter that drops stale query results; a short "expected state" window that trusts the user's click over transitional reports; skip resumes playback if it was playing; distributed-notification `Player State` applied instantly.
 

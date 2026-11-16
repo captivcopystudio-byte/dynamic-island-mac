@@ -112,10 +112,18 @@ struct MediaPlayerView: View {
             HStack(alignment: .bottom, spacing: 12) {
                 Color.clear.frame(width: MusicLayout.expandedArt, height: MusicLayout.expandedArt)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(track.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
+                    HStack(spacing: 5) {
+                        Text(track.title)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        if track.isExplicit {
+                            // Apple Music's explicit badge
+                            Image(systemName: "e.square.fill")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.white.opacity(0.5))
+                        }
+                    }
                     Text(track.artist.isEmpty ? track.album : track.artist)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.white.opacity(0.55))

@@ -5,6 +5,7 @@
 // loaded into /usr/bin/perl by mr-bridge.pl. Protocol:
 //   stdout: one JSON object per line whenever now-playing state changes
 //   stdin:  commands, one per line: play | pause | toggle | next | previous | seek <seconds>
+//           | pauseapp <bundle id> | refresh
 // The process exits when stdin closes (i.e. when Dynamic Island quits).
 
 #import <Foundation/Foundation.h>
@@ -19,6 +20,9 @@ typedef void (*GetClientFn)(dispatch_queue_t, void (^)(id));
 typedef CFStringRef (*ClientStringFn)(id);
 typedef Boolean (*SendCommandFn)(int, CFDictionaryRef);
 typedef void (*SetElapsedFn)(double);
+typedef void *(*LocalOriginFn)(void);
+typedef Boolean (*SendToAppFn)(int, CFDictionaryRef, void *, CFStringRef, unsigned int,
+                               dispatch_queue_t, void (^)(unsigned int, CFArrayRef));
 
 static RegisterFn MRRegister;
 static GetInfoFn MRGetInfo;
@@ -28,6 +32,8 @@ static ClientStringFn MRClientBundle;
 static ClientStringFn MRClientParentBundle;
 static SendCommandFn MRSendCommand;
 static SetElapsedFn MRSetElapsed;
+static LocalOriginFn MRLocalOrigin;
+static SendToAppFn MRSendToApp;
 static void *mrHandle;
 
 static dispatch_queue_t mrQueue;
@@ -46,6 +52,8 @@ static BOOL loadMediaRemote(void) {
     MRClientParentBundle = (ClientStringFn)dlsym(mrHandle, "MRNowPlayingClientGetParentAppBundleIdentifier");
     MRSendCommand = (SendCommandFn)dlsym(mrHandle, "MRMediaRemoteSendCommand");
     MRSetElapsed = (SetElapsedFn)dlsym(mrHandle, "MRMediaRemoteSetElapsedTime");
+    MRLocalOrigin = (LocalOriginFn)dlsym(mrHandle, "MRMediaRemoteGetLocalOrigin");
+    MRSendToApp = (SendToAppFn)dlsym(mrHandle, "MRMediaRemoteSendCommandToApp");
     return MRRegister && MRGetInfo && MRGetPlaying && MRSendCommand;
 }
 
@@ -85,6 +93,7 @@ static void publish(NSDictionary *info, BOOL playing, NSString *bundle, NSString
     out[@"timestamp"] = @([ts isKindOfClass:[NSDate class]] ? [ts timeIntervalSince1970]
                                                              : [NSDate date].timeIntervalSince1970);
     out[@"playing"] = @(playing);
+    out[@"explicit"] = @([numberOrZero(info[@"kMRMediaRemoteNowPlayingInfoIsExplicitTrack"]) boolValue]);
     out[@"bundle"] = bundle ?: @"";
     out[@"parent"] = parent ?: @"";
     id uid = info[@"kMRMediaRemoteNowPlayingInfoContentItemIdentifier"]
@@ -135,6 +144,11 @@ static void handleCommand(NSString *line) {
     else if ([cmd isEqualToString:@"next"]) MRSendCommand(4, NULL);
     else if ([cmd isEqualToString:@"previous"]) MRSendCommand(5, NULL);
     else if ([cmd isEqualToString:@"seek"] && parts.count > 1 && MRSetElapsed) MRSetElapsed(parts[1].doubleValue);
+    else if ([cmd isEqualToString:@"pauseapp"] && parts.count > 1 && MRSendToApp && MRLocalOrigin) {
+        // Pause one specific app (not whichever is "now playing").
+        MRSendToApp(1, NULL, MRLocalOrigin(), (__bridge CFStringRef)parts[1], 0, mrQueue,
+                    ^(unsigned int error, CFArrayRef statuses) {});
+    }
     else if ([cmd isEqualToString:@"refresh"]) dispatch_async(mrQueue, ^{ lastLine = nil; update(); });
 }
 

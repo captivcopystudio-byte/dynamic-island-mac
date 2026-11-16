@@ -20,6 +20,7 @@ final class MediaRemoteBridge {
         var timestamp = 0.0
         var rate = 0.0
         var playing = false
+        var explicit = false
         var artworkHash: UInt64 = 0
         var artwork: Data?
     }
@@ -105,6 +106,7 @@ final class MediaRemoteBridge {
                 update.timestamp = (object["timestamp"] as? NSNumber)?.doubleValue ?? 0
                 update.rate = (object["rate"] as? NSNumber)?.doubleValue ?? 0
                 update.playing = (object["playing"] as? NSNumber)?.boolValue ?? false
+                update.explicit = (object["explicit"] as? NSNumber)?.boolValue ?? false
                 update.artworkHash = (object["artworkHash"] as? NSNumber)?.uint64Value ?? 0
                 if let base64 = object["artwork"] as? String {
                     update.artwork = Data(base64Encoded: base64)

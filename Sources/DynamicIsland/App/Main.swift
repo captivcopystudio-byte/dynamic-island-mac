@@ -56,6 +56,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(toggleItem("Haptic Feedback", key: Prefs.haptics))
         menu.addItem(toggleItem("Show Volume HUD", key: Prefs.volumeHUD))
         menu.addItem(toggleItem("Show Battery Alerts", key: Prefs.batteryAlerts))
+        menu.addItem(toggleItem("Waveform Follows Music", key: Prefs.liveWaveform))
+        menu.addItem(toggleItem("Pause Other Audio When Something New Plays", key: Prefs.pauseOthers))
 
         let login = NSMenuItem(title: "Launch at Login", action: #selector(toggleLaunchAtLogin(_:)), keyEquivalent: "")
         login.target = self
@@ -82,6 +84,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let newValue = !Prefs.bool(key)
         UserDefaults.standard.set(newValue, forKey: key)
         sender.state = newValue ? .on : .off
+        NotificationCenter.default.post(name: Prefs.didChange, object: nil)
     }
 
     @objc private func toggleLaunchAtLogin(_ sender: NSMenuItem) {
@@ -107,6 +110,10 @@ enum Prefs {
     static let haptics = "haptics"
     static let volumeHUD = "showVolumeHUD"
     static let batteryAlerts = "showBatteryAlerts"
+    static let liveWaveform = "liveWaveform"
+    static let pauseOthers = "pauseOtherAudio"
+
+    static let didChange = Notification.Name("DynamicIslandPrefsDidChange")
 
     static func registerDefaults() {
         UserDefaults.standard.register(defaults: [
@@ -114,6 +121,8 @@ enum Prefs {
             haptics: true,
             volumeHUD: true,
             batteryAlerts: true,
+            liveWaveform: true,
+            pauseOthers: true,
         ])
     }
 

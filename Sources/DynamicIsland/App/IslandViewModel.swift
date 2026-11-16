@@ -60,6 +60,17 @@ final class IslandViewModel: ObservableObject {
         .sink { [weak self] in self?.objectWillChange.send() }
         .store(in: &cancellables)
 
+        // Listen to the audio output only while something is actually playing.
+        nowPlaying.$isPlaying
+            .removeDuplicates()
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in self?.updateAudioTap() }
+            .store(in: &cancellables)
+        NotificationCenter.default.publisher(for: Prefs.didChange)
+            .sink { [weak self] _ in self?.updateAudioTap() }
+            .store(in: &cancellables)
+        volume.onDeviceChange = { AudioTap.shared.restart() }
+
         volume.onChange = { [weak self] in
             guard Prefs.bool(Prefs.volumeHUD) else { return }
             self?.showTransient(.volume, for: 1.6)
@@ -75,6 +86,14 @@ final class IslandViewModel: ObservableObject {
         timer.onFinish = { [weak self] in
             NSSound(named: "Glass")?.play()
             self?.showTransient(.timerDone, for: 6)
+        }
+    }
+
+    private func updateAudioTap() {
+        if nowPlaying.isPlaying && Prefs.bool(Prefs.liveWaveform) {
+            AudioTap.shared.start()
+        } else {
+            AudioTap.shared.stop()
         }
     }
 
