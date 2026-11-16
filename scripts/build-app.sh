@@ -16,6 +16,12 @@ rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$(swift build -c release --arch arm64 --show-bin-path)/DynamicIsland" "$APP/Contents/MacOS/DynamicIsland"
 
+echo "==> Building media bridge (browser / YouTube / any-app audio)"
+clang -dynamiclib -fobjc-arc -O2 -arch arm64 -mmacosx-version-min=14.0 -framework Foundation \
+  -o "$APP/Contents/Resources/MediaRemoteAdapter.dylib" bridge/MediaRemoteAdapter.m
+cp bridge/mr-bridge.pl "$APP/Contents/Resources/mr-bridge.pl"
+codesign --force --sign - "$APP/Contents/Resources/MediaRemoteAdapter.dylib"
+
 echo "==> Rendering icon"
 ICONSET="build/AppIcon.iconset"
 rm -rf "$ICONSET" && mkdir -p "$ICONSET"

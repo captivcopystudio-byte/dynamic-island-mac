@@ -4,6 +4,7 @@ import ServiceManagement
 @main
 enum Main {
     static func main() {
+        signal(SIGPIPE, SIG_IGN) // a dead media helper must never take the app down
         let app = NSApplication.shared
         if let i = CommandLine.arguments.firstIndex(of: "--snapshot") {
             let dir = CommandLine.arguments.count > i + 1 ? CommandLine.arguments[i + 1] : "screenshots"

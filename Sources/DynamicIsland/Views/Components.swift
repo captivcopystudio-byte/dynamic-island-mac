@@ -87,7 +87,7 @@ struct WaveformView: View {
     var maxHeight: CGFloat = 14
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !isPlaying)) { context in
+        TimelineView(.animation(minimumInterval: 1.0 / 20.0, paused: !isPlaying)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             HStack(alignment: .center, spacing: spacing) {
                 ForEach(0..<barCount, id: \.self) { i in

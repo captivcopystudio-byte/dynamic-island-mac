@@ -99,6 +99,16 @@ struct MediaPlayerView: View {
                 HStack(spacing: 14) {
                     ArtworkView(image: np.artwork, size: 58, radius: 13)
                         .shadow(color: np.accent.opacity(0.25), radius: 10)
+                        .overlay(alignment: .bottomTrailing) {
+                            // Which app is playing (Safari, Chrome, Music, ...), like iOS.
+                            if let icon = np.sourceIcon {
+                                Image(nsImage: icon)
+                                    .resizable()
+                                    .frame(width: 22, height: 22)
+                                    .shadow(color: .black.opacity(0.5), radius: 2)
+                                    .offset(x: 7, y: 7)
+                            }
+                        }
                     VStack(alignment: .leading, spacing: 2) {
                         Text(track.title)
                             .font(.system(size: 15, weight: .semibold))
@@ -176,7 +186,7 @@ private struct ProgressRow: View {
                 .frame(height: 14)
                 .onHover { state.hovering = $0 }
                 .animation(.spring(response: 0.25, dampingFraction: 0.8), value: hovering)
-                Text("-" + TimeFormat.clock(max(0, duration - current)))
+                Text(duration > 0 ? "-" + TimeFormat.clock(max(0, duration - current)) : "LIVE")
                     .frame(width: 44, alignment: .trailing)
             }
             .font(.system(size: 11, weight: .medium).monospacedDigit())
@@ -204,7 +214,7 @@ private struct NothingPlayingView: View {
                 .foregroundStyle(.white)
             Text(np.automationDenied
                  ? "Allow Dynamic Island under Privacy › Automation."
-                 : "Play something in Music or Spotify.")
+                 : "Play music, a YouTube video, or anything else.")
                 .font(.system(size: 12))
                 .foregroundStyle(.white.opacity(0.5))
             HStack(spacing: 8) {

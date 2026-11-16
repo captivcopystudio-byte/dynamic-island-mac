@@ -37,18 +37,30 @@ private struct PlayerSnapshot {
     var artworkURL: String?
 }
 
-/// Reads and controls Apple Music / Spotify through Apple Events.
+/// What's playing right now, and the controls for it.
 ///
-/// macOS 15.4+ blocks the private MediaRemote framework for third-party apps, so we use
-/// AppleScript (needs one-time Automation permission) plus the players' distributed
-/// notifications for instant updates.
+/// Primary source: the system Now Playing service via `MediaRemoteBridge`, which covers every
+/// app including browsers (YouTube etc.). Fallback, used only if the bridge can't run:
+/// AppleScript to Music / Spotify (needs one-time Automation permission).
 final class NowPlayingService: ObservableObject {
     @Published private(set) var track: TrackInfo?
     @Published private(set) var isPlaying = false
     @Published private(set) var artwork: NSImage?
     @Published private(set) var accent: Color = .white
-    @Published private(set) var source: PlayerApp?
     @Published private(set) var automationDenied = false
+    /// Icon of the app that owns the audio (Safari, Chrome, Music, ...).
+    @Published private(set) var sourceIcon: NSImage?
+
+    private var source: PlayerApp? // AppleScript fallback target
+    private var sourceBundleID: String?
+
+    private let bridge = MediaRemoteBridge()
+    private var bridgeAlive = false       // helper has reported at least once
+    private var usingBridge = false       // current track came from the bridge
+    private var bridgeReportsPlaying = false
+    private var artworkHash: UInt64 = 0
+    private var artworkClearWork: DispatchWorkItem?
+    private var ignoreDriftUntil = Date.distantPast
 
     private var basePosition: Double = 0
     private var baseDate = Date()
@@ -75,11 +87,21 @@ final class NowPlayingService: ObservableObject {
         // Light polling keeps the scrubber honest after seeks made inside the player.
         let timer = Timer(timeInterval: 3, repeats: true) { [weak self] _ in
             guard let self else { return }
+            guard !self.bridgeAlive else { return } // the bridge pushes changes itself
             self.pollCount += 1
             if self.isPlaying || self.pollCount % 5 == 0 { self.refresh() }
         }
         RunLoop.main.add(timer, forMode: .common)
         pollTimer = timer
+
+        bridge.onUpdate = { [weak self] update in self?.applyBridge(update) }
+        bridge.onExit = { [weak self] in
+            guard let self else { return }
+            self.bridgeAlive = false
+            self.usingBridge = false
+            self.refresh()
+        }
+        bridge.start()
 
         refresh()
     }
@@ -102,6 +124,10 @@ final class NowPlayingService: ObservableObject {
     @objc private func playerChanged(_ note: Notification) {
         // The notification carries the authoritative state, so use it immediately
         // instead of waiting for an AppleScript round-trip.
+        if bridgeAlive {
+            bridge.send("refresh")
+            return
+        }
         if let state = note.userInfo?["Player State"] as? String {
             let app: PlayerApp = note.name.rawValue.hasPrefix("com.spotify") ? .spotify : .music
             if source == nil || source == app {
@@ -151,6 +177,10 @@ final class NowPlayingService: ObservableObject {
     }
 
     func refresh() {
+        if bridgeAlive {
+            bridge.send("refresh")
+            return
+        }
         let apps = PlayerApp.allCases.filter { $0.isRunning }
         guard !apps.isEmpty else {
             apply(nil, denied: false)
@@ -173,7 +203,7 @@ final class NowPlayingService: ObservableObject {
                 ?? snapshots.first { $0.track != nil }
             DispatchQueue.main.async {
                 // A command was sent after this query started: its result is stale.
-                guard generation == self.commandGeneration else { return }
+                guard generation == self.commandGeneration, !self.bridgeAlive else { return }
                 self.apply(pick, denied: denied)
             }
         }
@@ -183,13 +213,11 @@ final class NowPlayingService: ObservableObject {
         if automationDenied != denied { automationDenied = denied }
 
         guard let snap, let newTrack = snap.track else {
-            if track != nil { track = nil }
-            if isPlaying { isPlaying = false }
-            if artwork != nil { artwork = nil }
-            source = nil
-            artworkTrackID = nil
+            clear()
             return
         }
+        usingBridge = false
+        setSourceApp(snap.app.rawValue)
 
         let playing = resolvedPlaying(snap.isPlaying)
         let trackChanged = newTrack != track
@@ -199,11 +227,97 @@ final class NowPlayingService: ObservableObject {
         if trackChanged { track = newTrack }
         if stateChanged { isPlaying = playing }
         if source != snap.app { source = snap.app }
-        if trackChanged || stateChanged || drift > 1.5 { rebase(snap.position) }
+        if trackChanged || stateChanged || (drift > 1.5 && Date() > ignoreDriftUntil) { rebase(snap.position) }
 
         if artworkTrackID != newTrack.id {
             artworkTrackID = newTrack.id
             loadArtwork(for: snap)
+        }
+    }
+
+    private func clear() {
+        if track != nil { track = nil }
+        if isPlaying { isPlaying = false }
+        if artwork != nil { artwork = nil }
+        if sourceIcon != nil { sourceIcon = nil }
+        accent = .white
+        source = nil
+        sourceBundleID = nil
+        usingBridge = false
+        artworkTrackID = nil
+        artworkHash = 0
+    }
+
+    private func setSourceApp(_ bundleID: String) {
+        guard bundleID != sourceBundleID else { return }
+        sourceBundleID = bundleID
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID) {
+            sourceIcon = NSWorkspace.shared.icon(forFile: url.path)
+        } else {
+            sourceIcon = nil
+        }
+    }
+
+    // MARK: - System Now Playing (bridge)
+
+    private func applyBridge(_ update: MediaRemoteBridge.Update) {
+        bridgeAlive = true
+        if automationDenied { automationDenied = false }
+
+        guard !update.isEmpty else {
+            bridgeReportsPlaying = false
+            clear()
+            return
+        }
+        bridgeReportsPlaying = update.playing
+
+        let newTrack = TrackInfo(
+            id: update.id.isEmpty ? "\(update.title)|\(update.artist)" : update.id,
+            title: update.title, artist: update.artist, album: update.album,
+            duration: update.duration)
+
+        // The reported elapsed time was true at `timestamp`; project it to now.
+        var reported = update.elapsed
+        if update.playing, update.timestamp > 0 {
+            let age = max(0, Date().timeIntervalSince1970 - update.timestamp)
+            reported += age * (update.rate > 0 ? update.rate : 1)
+        }
+
+        let playing = resolvedPlaying(update.playing)
+        let trackChanged = newTrack != track
+        let stateChanged = playing != isPlaying
+        let drift = abs(position(at: Date()) - reported)
+
+        if trackChanged { track = newTrack }
+        if stateChanged { isPlaying = playing }
+        usingBridge = true
+        source = nil
+        // Browsers play through helper processes; the parent is the real app.
+        setSourceApp(update.parent.isEmpty ? update.bundle : update.parent)
+        if trackChanged || stateChanged || (drift > 1.5 && Date() > ignoreDriftUntil) { rebase(reported) }
+
+        // Artwork: the helper only sends the image when it changes.
+        if update.artworkHash == 0 {
+            // New tracks briefly report no artwork; wait a moment before blanking.
+            if artworkHash != 0, artworkClearWork == nil {
+                let work = DispatchWorkItem { [weak self] in
+                    guard let self else { return }
+                    self.artworkClearWork = nil
+                    self.artworkHash = 0
+                    self.artwork = nil
+                    self.accent = .white
+                }
+                artworkClearWork = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
+            }
+        } else {
+            artworkClearWork?.cancel()
+            artworkClearWork = nil
+            if update.artworkHash != artworkHash, let data = update.artwork, let image = NSImage(data: data) {
+                artworkHash = update.artworkHash
+                artwork = image
+                accent = Self.accentColor(from: image) ?? .white
+            }
         }
     }
 
@@ -368,7 +482,11 @@ final class NowPlayingService: ObservableObject {
         expect(playing: target)
         // Explicit play/pause (not the "playpause" toggle) so a stale UI state can
         // never toggle the player the wrong way.
-        send(target ? "play" : "pause")
+        if usingBridge {
+            bridge.send(target ? "play" : "pause")
+        } else {
+            send(target ? "play" : "pause")
+        }
     }
 
     func next() { skip("next track") }
@@ -381,6 +499,17 @@ final class NowPlayingService: ObservableObject {
         let keepPlaying = isPlaying
         rebase(0)
         expect(playing: keepPlaying, for: 2)
+        ignoreDriftUntil = Date().addingTimeInterval(2)
+        if usingBridge {
+            bridge.send(command == "next track" ? "next" : "previous")
+            if keepPlaying {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in
+                    guard let self, self.usingBridge, !self.bridgeReportsPlaying else { return }
+                    self.bridge.send("play")
+                }
+            }
+            return
+        }
         guard let app = source, app.isRunning else { return }
         var script = "tell application \"\(app.appName)\" to \(command)"
         if keepPlaying {
@@ -401,7 +530,12 @@ final class NowPlayingService: ObservableObject {
     func seek(to seconds: Double) {
         rebase(seconds)
         objectWillChange.send()
-        send("set player position to \(seconds)")
+        ignoreDriftUntil = Date().addingTimeInterval(1.5)
+        if usingBridge {
+            bridge.send("seek \(seconds)")
+        } else {
+            send("set player position to \(seconds)")
+        }
     }
 
     func open(_ app: PlayerApp) {
