@@ -5,7 +5,7 @@ cd "$(dirname "$0")/.."
 
 APP_NAME="Dynamic Island"
 BUNDLE_ID="com.opensource.dynamicisland"
-VERSION="${VERSION:-1.1.2}"
+VERSION="${VERSION:-1.1.3}"
 # VARIANT=notch (default): hugs the MacBook notch, falls back to a pill on screens without one.
 # VARIANT=pill: always a floating pill, for Macs with no notch.
 VARIANT="${VARIANT:-notch}"

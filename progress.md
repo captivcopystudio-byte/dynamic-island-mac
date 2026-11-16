@@ -5,10 +5,10 @@ Update this file at the end of every work session.
 
 ---
 
-## Status: v1.1.2 (2026-11-16)
+## Status: v1.1.3 (2026-11-16)
 
 - **Repo:** https://github.com/captivcopystudio-byte/dynamic-island-mac (public)
-- **Releases:** v1.0.0 (source only), v1.1.0 and v1.1.1 (superseded), **v1.1.2 (latest)**
+- **Releases:** v1.0.0 (source only), v1.1.0 to v1.1.2 (superseded), **v1.1.3 (latest)**
 - **Downloads per release:** `DynamicIsland-Notch.zip` (MacBooks with a notch) and `DynamicIsland-NoNotch.zip` (floating pill)
 - **Requires:** macOS 14.2+, Apple silicon
 - **Dev machine:** MacBook Air M5, macOS 27, notch 185 × 33.5 pt, Command Line Tools only (no Xcode)
@@ -77,7 +77,7 @@ Everything below was checked only in rendered snapshots or by reading system dat
 
 ## Fix history
 
-- **2026-11-16 · Calendar unreachable while music plays.** The player view replaces the tab bar, and it only had a timer shortcut. It now has timer and calendar shortcuts at the bottom-left (calendar turns red when an event is within 10 minutes). Rule: any new tab needs a shortcut in `MediaPlayerView` too. Not yet in a release (latest is v1.1.2).
+- **2026-11-16 · Calendar unreachable while music plays.** The player view replaces the tab bar, and it only had a timer shortcut. It now has timer and calendar shortcuts at the bottom-left (calendar turns red when an event is within 10 minutes). Rule: any new tab needs a shortcut in `MediaPlayerView` too.
 - **2026-11-15 · Repeated permission prompts.** Causes: (1) at launch `refresh()` ran the AppleScript fallback before the media helper had reported, triggering "control Music"; AppleScript is now used only if the helper is missing or has failed for good (`bridge.isUsable`). (2) Calendar and Focus access were requested at every launch; Calendar is now requested only from the "Allow" button in the Calendar tab. (3) The app is ad-hoc signed, so every rebuild is a "new app" to macOS and loses earlier grants.
 - **2026-11-15 · Notch collisions.** At 400 pt wide the island left only ~77 pt beside the 185 pt notch: the title sat jammed under it and the third tab was hidden behind it. Expanded content now starts below the notch (`contentTop`). Found by drawing the notch into snapshots: `SHOW_NOTCH=1 DynamicIsland --snapshot <dir>`.
 - **2026-11-15 · Artwork not updating between albums.** `-[NSData hash]` only looks at the first bytes, which match across JPEGs. The helper now sends a change counter.
@@ -93,6 +93,7 @@ Everything below was checked only in rendered snapshots or by reading system dat
 | v1.1.0 | Any-app audio (browser/YouTube), Apple-style redesign, E badge, pause previous player, calendar, headphones, camera/mic, Focus/Caps Lock, notch fix, Notch + NoNotch downloads |
 | v1.1.1 | Removed the audio-reactive waveform (system audio prompt) |
 | v1.1.2 | Waveform removed entirely; Clock app timers in the island; no permission requests at launch |
+| v1.1.3 | Calendar shortcut in the music player (Calendar was unreachable while something played) |
 
 How to release: bump `VERSION` in `scripts/build-app.sh`, run `make release`, tag, push, then `gh release create <tag> build/release/*.zip`.
 
