@@ -556,7 +556,15 @@ final class NowPlayingService: ObservableObject {
         self.artwork = artwork
         accent = artwork.flatMap(Self.accentColor(from:)) ?? .white
         source = track == nil ? nil : .music
+        if track != nil { setSourceApp(PlayerApp.music.rawValue) }
         rebase(position)
+    }
+
+    /// Bring the app that's playing to the front (like tapping the island on iPhone).
+    func openSourceApp() {
+        guard let id = sourceBundleID,
+              let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) else { return }
+        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
     private func send(_ command: String) {

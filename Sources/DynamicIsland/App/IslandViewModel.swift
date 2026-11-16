@@ -27,6 +27,7 @@ struct LayoutKey: Hashable {
     var expanded: Bool
     var compact: CompactKind?
     var bubble: Bool
+    var music: Bool
     var tab: IslandTab
     var visible: Bool
 }
@@ -103,14 +104,21 @@ final class IslandViewModel: ObservableObject {
     }
 
     var layoutKey: LayoutKey {
-        LayoutKey(expanded: isExpanded, compact: compactKind, bubble: showsTimerBubble, tab: tab, visible: isVisible)
+        LayoutKey(expanded: isExpanded, compact: compactKind, bubble: showsTimerBubble, music: showsMusicElements, tab: tab, visible: isVisible)
     }
 
-    var topRadius: CGFloat { isExpanded ? 14 : 6 }
-    var bottomRadius: CGFloat { isExpanded ? 34 : (compactKind == nil ? 10 : 13) }
+    var topRadius: CGFloat { isExpanded ? 12 : 6 }
+    var bottomRadius: CGFloat { isExpanded ? 38 : (compactKind == nil ? 10 : 14) }
 
+    /// Apple's expanded island is ~371-408 pt wide and at most 160 pt tall (HIG, Live Activities).
     var expandedSize: CGSize {
-        CGSize(width: 500, height: geometry.notchSize.height + 160)
+        CGSize(width: 400, height: max(150, geometry.notchSize.height + 112))
+    }
+
+    /// Album art + waveform stay on screen and glide between compact and expanded.
+    var showsMusicElements: Bool {
+        guard nowPlaying.track != nil else { return false }
+        return isExpanded ? tab == .media : compactKind == .music
     }
 
     func earWidth(_ kind: CompactKind) -> CGFloat {

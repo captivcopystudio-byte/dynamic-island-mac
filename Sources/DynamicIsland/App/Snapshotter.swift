@@ -28,10 +28,19 @@ enum Snapshotter {
                 IslandRootView(vm: vm)
             }
             .frame(width: 600, height: 250)
+            .transaction { $0.animation = nil; $0.disablesAnimations = true }
             let renderer = ImageRenderer(content: view)
             renderer.scale = 2
-            guard let image = renderer.nsImage, let tiff = image.tiffRepresentation,
-                  let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else {
+            // Redraw into plain 8-bit sRGB (app icons can make the renderer emit 16-bit HDR).
+            guard let cg = renderer.cgImage,
+                  let ctx = CGContext(data: nil, width: cg.width, height: cg.height, bitsPerComponent: 8,
+                                      bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else {
+                print("failed: \(name)"); return
+            }
+            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: cg.width, height: cg.height))
+            guard let flat = ctx.makeImage(),
+                  let png = NSBitmapImageRep(cgImage: flat).representation(using: .png, properties: [:]) else {
                 print("failed: \(name)"); return
             }
             try? png.write(to: dir.appendingPathComponent("\(name).png"))

@@ -3,7 +3,9 @@ import SwiftUI
 struct IslandRootView: View {
     @ObservedObject var vm: IslandViewModel
 
-    private static let morph = Animation.spring(response: 0.44, dampingFraction: 0.8)
+    // Opening has a little bounce; closing settles quickly without overshoot (as on iPhone).
+    private static let open = Animation.spring(response: 0.46, dampingFraction: 0.72)
+    private static let close = Animation.spring(response: 0.38, dampingFraction: 0.9)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -26,13 +28,14 @@ struct IslandRootView: View {
                     .id(kind)
                     .transition(.islandContent)
             }
+            musicElements
         }
         .frame(width: size.width, height: size.height, alignment: .top)
         .background(Color.black)
         .clipShape(shape)
         .contentShape(shape)
         .onTapGesture { vm.handleTap() }
-        .shadow(color: .black.opacity(vm.isExpanded ? 0.55 : 0), radius: 18, y: 8)
+        .shadow(color: .black.opacity(vm.isExpanded ? 0.45 : 0), radius: 20, y: 10)
         .overlay(alignment: .trailing) {
             if vm.showsTimerBubble {
                 TimerBubble(timer: vm.timer, size: vm.geometry.notchSize.height)
@@ -41,8 +44,69 @@ struct IslandRootView: View {
             }
         }
         .opacity(vm.isVisible ? 1 : 0)
-        .animation(Self.morph, value: vm.layoutKey)
+        .animation(vm.isExpanded ? Self.open : Self.close, value: vm.layoutKey)
         .environment(\.colorScheme, .dark)
+    }
+
+    /// The album art and waveform are never swapped out between compact and expanded:
+    /// the same two views slide and grow, so the island feels like one continuous object.
+    @ViewBuilder private var musicElements: some View {
+        if vm.showsMusicElements {
+            let m = MusicLayout(expanded: vm.isExpanded, notchHeight: vm.geometry.notchSize.height,
+                                flare: vm.topRadius)
+            ArtworkView(image: vm.nowPlaying.artwork, radius: m.artRadius)
+                .frame(width: m.artSize, height: m.artSize)
+                .shadow(color: vm.nowPlaying.accent.opacity(vm.isExpanded ? 0.3 : 0), radius: 12)
+                .padding(.leading, m.artLeading)
+                .padding(.top, m.artTop)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .allowsHitTesting(false)
+                .transition(.opacity.combined(with: .scale(scale: 0.6, anchor: .topLeading)))
+
+            WaveformView(isPlaying: vm.nowPlaying.isPlaying, color: vm.nowPlaying.accent)
+                .scaleEffect(m.waveScale, anchor: .trailing)
+                .padding(.trailing, m.waveTrailing)
+                .padding(.top, m.waveTop)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .allowsHitTesting(false)
+                .transition(.opacity.combined(with: .scale(scale: 0.6, anchor: .topTrailing)))
+        }
+    }
+}
+
+/// Where the shared music elements sit in each state. `ExpandedView` reserves matching gaps.
+struct MusicLayout {
+    static let expandedArt: CGFloat = 58
+    static let expandedTop: CGFloat = 14
+    static let expandedMargin: CGFloat = 18 // from the island body edge (inside the flare)
+    static let waveHeight: CGFloat = 14
+
+    let artSize: CGFloat
+    let artRadius: CGFloat
+    let artLeading: CGFloat
+    let artTop: CGFloat
+    let waveScale: CGFloat
+    let waveTrailing: CGFloat
+    let waveTop: CGFloat
+
+    init(expanded: Bool, notchHeight: CGFloat, flare: CGFloat) {
+        if expanded {
+            artSize = Self.expandedArt
+            artRadius = 14
+            artLeading = flare + Self.expandedMargin
+            artTop = Self.expandedTop
+            waveScale = 1.5
+            waveTrailing = flare + Self.expandedMargin + 2
+            waveTop = Self.expandedTop + (Self.expandedArt - Self.waveHeight) / 2
+        } else {
+            artSize = 22
+            artRadius = 6.5
+            artLeading = flare + 10
+            artTop = (notchHeight - 22) / 2
+            waveScale = 1
+            waveTrailing = flare + 10
+            waveTop = (notchHeight - Self.waveHeight) / 2
+        }
     }
 }
 

@@ -14,21 +14,26 @@ struct NotchShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         let t = max(0, min(topRadius, rect.width / 4, rect.height / 2))
-        let b = max(0, min(bottomRadius, rect.height - t, (rect.width - 2 * t) / 2))
-        var p = Path()
-        p.move(to: CGPoint(x: rect.minX, y: rect.minY))
-        p.addArc(tangent1End: CGPoint(x: rect.minX + t, y: rect.minY),
-                 tangent2End: CGPoint(x: rect.minX + t, y: rect.minY + t), radius: t)
-        p.addLine(to: CGPoint(x: rect.minX + t, y: rect.maxY - b))
-        p.addArc(tangent1End: CGPoint(x: rect.minX + t, y: rect.maxY),
-                 tangent2End: CGPoint(x: rect.minX + t + b, y: rect.maxY), radius: b)
-        p.addLine(to: CGPoint(x: rect.maxX - t - b, y: rect.maxY))
-        p.addArc(tangent1End: CGPoint(x: rect.maxX - t, y: rect.maxY),
-                 tangent2End: CGPoint(x: rect.maxX - t, y: rect.maxY - b), radius: b)
-        p.addLine(to: CGPoint(x: rect.maxX - t, y: rect.minY + t))
-        p.addArc(tangent1End: CGPoint(x: rect.maxX - t, y: rect.minY),
-                 tangent2End: CGPoint(x: rect.maxX, y: rect.minY), radius: t)
-        p.closeSubpath()
+        let b = max(0, min(bottomRadius, rect.height, (rect.width - 2 * t) / 2))
+        // Body: Apple's "continuous" (squircle) corners at the bottom, square at the top.
+        let body = CGRect(x: rect.minX + t, y: rect.minY, width: rect.width - 2 * t, height: rect.height)
+        var p = UnevenRoundedRectangle(
+            cornerRadii: RectangleCornerRadii(topLeading: 0, bottomLeading: b, bottomTrailing: b, topTrailing: 0),
+            style: .continuous
+        ).path(in: body)
+        // Concave flares where the island meets the top edge of the screen.
+        if t > 0 {
+            p.move(to: CGPoint(x: rect.minX, y: rect.minY))
+            p.addArc(tangent1End: CGPoint(x: rect.minX + t, y: rect.minY),
+                     tangent2End: CGPoint(x: rect.minX + t, y: rect.minY + t), radius: t)
+            p.addLine(to: CGPoint(x: rect.minX + t, y: rect.minY))
+            p.closeSubpath()
+            p.move(to: CGPoint(x: rect.maxX, y: rect.minY))
+            p.addArc(tangent1End: CGPoint(x: rect.maxX - t, y: rect.minY),
+                     tangent2End: CGPoint(x: rect.maxX - t, y: rect.minY + t), radius: t)
+            p.addLine(to: CGPoint(x: rect.maxX - t, y: rect.minY))
+            p.closeSubpath()
+        }
         return p
     }
 }
@@ -53,27 +58,32 @@ extension AnyTransition {
     }
 }
 
+/// Album art. Fills whatever frame the caller gives it, so its size can animate.
 struct ArtworkView: View {
     let image: NSImage?
-    let size: CGFloat
     let radius: CGFloat
 
     var body: some View {
-        ZStack {
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                LinearGradient(colors: [Color(white: 0.28), Color(white: 0.16)],
-                               startPoint: .topLeading, endPoint: .bottomTrailing)
-                Image(systemName: "music.note")
-                    .font(.system(size: size * 0.42, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
+        GeometryReader { geo in
+            ZStack {
+                if let image {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                } else {
+                    LinearGradient(colors: [Color(white: 0.30), Color(white: 0.16)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                    Image(systemName: "music.note")
+                        .font(.system(size: geo.size.width * 0.42, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.55))
+                }
             }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
+                .strokeBorder(Color.white.opacity(0.08), lineWidth: 0.5))
         }
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
     }
 }
 
@@ -81,8 +91,8 @@ struct ArtworkView: View {
 struct WaveformView: View {
     var isPlaying: Bool
     var color: Color
-    var barCount = 4
-    var barWidth: CGFloat = 3
+    var barCount = 5
+    var barWidth: CGFloat = 2.5
     var spacing: CGFloat = 2
     var maxHeight: CGFloat = 14
 
