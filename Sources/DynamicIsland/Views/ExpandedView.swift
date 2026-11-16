@@ -368,16 +368,23 @@ struct TimerPanel: View {
     private var active: some View {
         TimelineView(.periodic(from: .now, by: 0.25)) { ctx in
             HStack(spacing: 10) {
-                circleButton(timer.isRunning ? "pause.fill" : "play.fill", fg: .orange,
-                             bg: Color.orange.opacity(0.26)) {
-                    timer.isRunning ? timer.pause() : timer.resume()
-                }
-                circleButton("xmark", fg: .white, bg: Color.white.opacity(0.2)) {
-                    timer.cancel()
+                if timer.isClockTimer {
+                    // Started in the Clock app: macOS only lets us show it, so control it there.
+                    circleButton("clock.fill", fg: .orange, bg: Color.orange.opacity(0.26)) {
+                        timer.openClockApp()
+                    }
+                } else {
+                    circleButton(timer.isRunning ? "pause.fill" : "play.fill", fg: .orange,
+                                 bg: Color.orange.opacity(0.26)) {
+                        timer.isRunning ? timer.pause() : timer.resume()
+                    }
+                    circleButton("xmark", fg: .white, bg: Color.white.opacity(0.2)) {
+                        timer.cancel()
+                    }
                 }
                 Spacer(minLength: 0)
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(timer.isRunning ? "Timer" : "Paused")
+                    Text(timer.isRunning ? (timer.isClockTimer ? "Clock" : "Timer") : "Paused")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Color.orange)
                     Text(TimeFormat.countdown(timer.remaining(at: ctx.date)))

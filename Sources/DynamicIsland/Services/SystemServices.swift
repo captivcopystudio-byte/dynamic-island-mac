@@ -157,8 +157,20 @@ final class TimerService: ObservableObject {
     @Published private(set) var pausedRemaining: TimeInterval?
     @Published private(set) var total: TimeInterval = 0
 
-    var onFinish: (() -> Void)?
+    /// true when the timer on show was started in the macOS Clock app, not here.
+    @Published private(set) var isClockTimer = false
+
+    /// Argument: whether the finished timer belonged to the Clock app (which plays its own alarm).
+    var onFinish: ((Bool) -> Void)?
     private var ticker: Timer?
+    private var clockPoll: Timer?
+
+    init() {
+        let t = Timer(timeInterval: 1.5, repeats: true) { [weak self] _ in self?.syncWithClockApp() }
+        RunLoop.main.add(t, forMode: .common)
+        clockPoll = t
+        syncWithClockApp()
+    }
 
     var isActive: Bool { endDate != nil || pausedRemaining != nil }
     var isRunning: Bool { endDate != nil }
@@ -174,6 +186,7 @@ final class TimerService: ObservableObject {
     }
 
     func start(seconds: TimeInterval) {
+        isClockTimer = false
         total = seconds
         pausedRemaining = nil
         endDate = Date().addingTimeInterval(seconds)
@@ -195,18 +208,83 @@ final class TimerService: ObservableObject {
     }
 
     func cancel() {
+        isClockTimer = false
         ticker?.invalidate()
         endDate = nil
         pausedRemaining = nil
         total = 0
     }
 
+    // MARK: Clock app
+
+    func openClockApp() {
+        if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: "com.apple.clock") {
+            NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        }
+    }
+
+    /// Mirrors a timer running in the macOS Clock app. Clock keeps its timers in the
+    /// `com.apple.mobiletimerd` preferences; there is no public API, so this is read-only:
+    /// the island can show a Clock timer but can't pause or cancel it.
+    private func syncWithClockApp() {
+        // A timer started from the island takes priority.
+        if isActive && !isClockTimer { return }
+
+        let domain = "com.apple.mobiletimerd" as CFString
+        CFPreferencesAppSynchronize(domain)
+        let root = CFPreferencesCopyAppValue("MTTimers" as CFString, domain) as? [String: Any]
+        let entries = root?["MTTimers"] as? [[String: Any]] ?? []
+
+        var running: (end: Date, total: TimeInterval)?
+        var paused: (remaining: TimeInterval, total: TimeInterval)?
+        let now = Date()
+        for entry in entries {
+            guard let timer = entry["$MTTimer"] as? [String: Any] else { continue }
+            let state = (timer["MTTimerState"] as? NSNumber)?.intValue ?? 1
+            let duration = (timer["MTTimerDuration"] as? NSNumber)?.doubleValue ?? 0
+            let fire = timer["MTTimerFireTime"] as? [String: Any] ?? [:]
+            if let date = (fire["$MTTimerDate"] as? [String: Any])?["MTTimerDate"] as? Date {
+                // A fire date means it's counting down.
+                if date > now, state != 1, running == nil || date < running!.end {
+                    running = (date, max(duration, date.timeIntervalSince(now)))
+                }
+            } else if state == 2,
+                      let left = ((fire["$MTTimerTimeInterval"] as? [String: Any])?["MTTimerTimeInterval"] as? NSNumber)?.doubleValue,
+                      left > 0 {
+                paused = (left, max(duration, left))
+            }
+        }
+
+        if let running {
+            if !isClockTimer || endDate == nil || abs(endDate!.timeIntervalSince(running.end)) > 0.5 {
+                isClockTimer = true
+                total = running.total
+                pausedRemaining = nil
+                endDate = running.end
+                startTicker()
+            }
+        } else if let paused {
+            if !isClockTimer || pausedRemaining == nil || abs(pausedRemaining! - paused.remaining) > 0.5 {
+                ticker?.invalidate()
+                isClockTimer = true
+                total = paused.total
+                endDate = nil
+                pausedRemaining = paused.remaining
+            }
+        } else if isClockTimer {
+            // It was cancelled in Clock (a timer that ran out is handled by the ticker).
+            if let endDate, endDate.timeIntervalSinceNow < 1 { return }
+            cancel()
+        }
+    }
+
     private func startTicker() {
         ticker?.invalidate()
         let t = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in
             guard let self, let end = self.endDate, end <= Date() else { return }
+            let fromClock = self.isClockTimer
             self.cancel()
-            self.onFinish?()
+            self.onFinish?(fromClock)
         }
         RunLoop.main.add(t, forMode: .common)
         ticker = t

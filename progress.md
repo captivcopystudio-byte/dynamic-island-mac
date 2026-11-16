@@ -56,6 +56,8 @@ Update this file at the end of every work session.
 - [x] **Two variants** (v1.1.0): `DynamicIsland-Notch.zip` and `DynamicIsland-NoNotch.zip`, built by `make release`. Same code; the only difference is the Info.plist key `DIDefaultStyle` (`auto` / `pill`), which sets the default of the "Floating Pill Style" menu toggle
 - [x] **Floating pill style** for Macs without a notch: capsule detached from the top edge, all four corners rounded when expanded, hidden when idle. On a notched screen it sits just below the notch
 
+- [x] **Clock app timers** show in the island (read-only): `TimerService.syncWithClockApp()` polls the `com.apple.mobiletimerd` preferences every 1.5 s. A Clock timer shows an "open Clock" button instead of pause/cancel, and the island doesn't play its own chime for it. **The running/paused data format is assumed (fire date under `$MTTimerDate`, paused = state 2) and has not been checked against a live Clock timer.** Timers started in the island do not appear in Clock (no API).
+
 ### Fixes
 - **2026-11-15 · Waveform removed entirely** at the user's request (not just the audio-reactive part). `WaveformView` is deleted; compact music shows album art only. Do not re-add.
 - **2026-11-15 · Removed the audio-reactive waveform.** The Core Audio process tap made macOS show the "record your system audio" prompt every time music started (the grant doesn't stick for this ad-hoc signed app). `AudioTap.swift`, its menu toggle and `NSAudioCaptureUsageDescription` are gone; the bars are back to the generic animation, which needs no permission. Don't re-add a tap unless the app gets a stable signing identity.

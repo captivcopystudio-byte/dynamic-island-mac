@@ -124,8 +124,8 @@ final class IslandViewModel: ObservableObject {
             guard Prefs.bool(Prefs.batteryAlerts) else { return }
             self?.showTransient(.lowBattery, for: 4)
         }
-        timer.onFinish = { [weak self] in
-            NSSound(named: "Glass")?.play()
+        timer.onFinish = { [weak self] fromClock in
+            if !fromClock { NSSound(named: "Glass")?.play() } // Clock rings its own alarm
             self?.showTransient(.timerDone, for: 6)
         }
     }
